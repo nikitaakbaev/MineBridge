@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.core.exceptions import ConfigurationError
 from minebridge_frp.app.models.vps import VpsConfig
+from minebridge_frp.app.services.password_vault import PasswordVault
 from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.services.vps_manager import VpsManager
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
@@ -33,6 +34,7 @@ class VpsTab(QWidget):
         super().__init__()
         self.context = context
         self.profile_service = profile_service
+        self.password_vault = PasswordVault(context.config_dir)
         self._threads = []
         self._autosave_enabled = False
 
@@ -108,6 +110,7 @@ class VpsTab(QWidget):
         self.ssh_port.setValue(config.ssh_port)
         self.username.setText(config.username)
         self.auth_type.setCurrentText(config.auth_type)
+        self._load_saved_password(config)
         self.private_key_path.set_path(config.private_key_path)
         self.install_dir.setText(config.install_dir)
         self.bind_port.setValue(config.frps_bind_port)
@@ -120,6 +123,7 @@ class VpsTab(QWidget):
             ssh_port=self.ssh_port.value(),
             username=self.username.text().strip(),
             auth_type=self.auth_type.currentText(),
+            password_encrypted=self.password_vault.encrypt_password(self.password.text()),
             private_key_path=self.private_key_path.text(),
             install_dir=self.install_dir.text().strip() or "/opt/minebridge-frp",
             frps_bind_port=self.bind_port.value(),
@@ -271,6 +275,7 @@ class VpsTab(QWidget):
         self.host.editingFinished.connect(self._autosave)
         self.username.editingFinished.connect(self._autosave)
         self.auth_type.currentTextChanged.connect(self._autosave)
+        self.password.editingFinished.connect(self._autosave)
         self.private_key_path.input.editingFinished.connect(self._autosave)
         self.install_dir.editingFinished.connect(self._autosave)
         self.ssh_port.valueChanged.connect(self._autosave)
@@ -304,6 +309,13 @@ class VpsTab(QWidget):
 
     def _append_log(self, line: str) -> None:
         self.log_viewer.append_line(line)
+
+    def _load_saved_password(self, config: VpsConfig) -> None:
+        try:
+            self.password.setText(self.password_vault.decrypt_password(config.password_encrypted))
+        except ConfigurationError as exc:
+            self.password.clear()
+            self._append_log(str(exc))
 
     def _show_status(self, message: str) -> None:
         window = self.window()

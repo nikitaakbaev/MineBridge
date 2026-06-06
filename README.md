@@ -43,6 +43,7 @@ Stage 4 is implemented:
 Stage 5 is implemented:
 
 - SSH connections to VPS through paramiko;
+- saved VPS passwords are encrypted locally with an app key in the config directory;
 - remote command execution with sudo support;
 - SFTP upload helpers;
 - remote frps.toml generation;

@@ -63,6 +63,7 @@ def test_vps_tab_saves_settings_from_ui(tmp_path):
     tab.host.setText("193.124.67.110")
     tab.ssh_port.setValue(2222)
     tab.username.setText("root")
+    tab.password.setText("ssh-secret")
     tab.install_dir.setText("/opt/minebridge-frp-test")
     tab.bind_port.setValue(7001)
     tab.dashboard_enabled.setChecked(True)
@@ -74,7 +75,13 @@ def test_vps_tab_saves_settings_from_ui(tmp_path):
     assert saved.host == "193.124.67.110"
     assert saved.ssh_port == 2222
     assert saved.username == "root"
+    assert saved.password_encrypted is not None
+    assert saved.password_encrypted != "ssh-secret"
     assert saved.install_dir == "/opt/minebridge-frp-test"
     assert saved.frps_bind_port == 7001
     assert saved.dashboard_enabled is True
     assert saved.dashboard_port == 7501
+
+    reloaded_tab = VpsTab(context, profile_service)
+
+    assert reloaded_tab.password.text() == "ssh-secret"

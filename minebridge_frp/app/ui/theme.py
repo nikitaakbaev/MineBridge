@@ -51,11 +51,15 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
     border: 1px solid palette(mid);
     border-radius: 5px;
     padding: 6px;
-    min-height: 28px;
     selection-background-color: #2563eb;
+}
+QLineEdit, QSpinBox, QComboBox {
+    min-height: 28px;
+    max-height: 42px;
 }
 QCheckBox {
     min-height: 28px;
+    max-height: 42px;
     spacing: 8px;
 }
 QComboBox::drop-down {
@@ -75,6 +79,13 @@ QPushButton:hover {
 }
 QPlainTextEdit {
     font-family: "JetBrains Mono", "Consolas", monospace;
+}
+QSplitter::handle {
+    background: palette(mid);
+    margin: 4px 0;
+}
+QSplitter::handle:vertical {
+    height: 8px;
 }
 """
 

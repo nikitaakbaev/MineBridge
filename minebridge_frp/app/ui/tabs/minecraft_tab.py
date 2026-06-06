@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, QTimer
+from PySide6.QtCore import QProcess, Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -118,11 +119,28 @@ class MinecraftTab(QWidget):
         self.console_input = ConsoleInput()
         self.console_input.command_submitted.connect(self._send_command)
 
+        controls = QWidget()
+        controls_layout = QVBoxLayout(controls)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.addLayout(form)
+        controls_layout.addWidget(actions)
+
+        output = QWidget()
+        output_layout = QVBoxLayout(output)
+        output_layout.setContentsMargins(0, 0, 0, 0)
+        output_layout.addWidget(self.log_viewer)
+        output_layout.addWidget(self.console_input)
+
+        splitter = QSplitter()
+        splitter.setOrientation(Qt.Orientation.Vertical)
+        splitter.addWidget(controls)
+        splitter.addWidget(output)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([540, 260])
+
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
-        layout.addWidget(actions)
-        layout.addWidget(self.log_viewer)
-        layout.addWidget(self.console_input)
+        layout.addWidget(splitter)
 
         self._load_active_profile()
 

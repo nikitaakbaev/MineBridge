@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -98,10 +100,22 @@ class VpsTab(QWidget):
 
         self.log_viewer = LogViewer("VPS logs")
 
+        controls = QWidget()
+        controls_layout = QVBoxLayout(controls)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.addLayout(form)
+        controls_layout.addWidget(actions)
+
+        splitter = QSplitter()
+        splitter.setOrientation(Qt.Orientation.Vertical)
+        splitter.addWidget(controls)
+        splitter.addWidget(self.log_viewer)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([420, 260])
+
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
-        layout.addWidget(actions)
-        layout.addWidget(self.log_viewer)
+        layout.addWidget(splitter)
 
         self._load_active_profile()
         self._connect_autosave()

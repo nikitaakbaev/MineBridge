@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QSizePolicy, QWidget
 
 
 class ConsoleInput(QWidget):
@@ -13,11 +13,16 @@ class ConsoleInput(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMaximumHeight(52)
         self.input = QLineEdit()
         self.input.setPlaceholderText("Команда Minecraft-сервера")
+        self.input.setMaximumHeight(42)
         self.button = QPushButton("Отправить")
+        self.button.setMaximumHeight(42)
 
         layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.input)
         layout.addWidget(self.button)
 
@@ -30,4 +35,3 @@ class ConsoleInput(QWidget):
             return
         self.command_submitted.emit(command)
         self.input.clear()
-

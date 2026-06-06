@@ -16,3 +16,4 @@ class DiagnosticResult(BaseModel):
     name: str
     description: str
     fix_available: bool = False
+    fix_id: str | None = None

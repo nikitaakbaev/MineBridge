@@ -106,7 +106,7 @@ class FrpManager(QObject):
         return candidates[-1] if candidates else None
 
     def start_frpc(self, config_path: Path, binary_path: Path | None = None) -> None:
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             raise ServiceError("frpc уже запущен.")
 
         binary = binary_path or self.find_frpc_binary()
@@ -131,7 +131,7 @@ class FrpManager(QObject):
             raise ServiceError("Не удалось запустить frpc.")
 
     def stop_frpc(self) -> None:
-        if not self.process or self.process.state() == QProcess.NotRunning:
+        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
             self.status_changed.emit("stopped")
             return
         self.process.terminate()

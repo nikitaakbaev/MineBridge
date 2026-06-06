@@ -112,7 +112,7 @@ class MinecraftManager(QObject):
 
     def start_server(self, config: MinecraftConfig) -> None:
         """Start Minecraft server via QProcess."""
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             raise ServiceError("Minecraft-сервер уже запущен.")
 
         server_dir = Path(config.server_dir)
@@ -149,19 +149,19 @@ class MinecraftManager(QObject):
 
     def stop_server_gracefully(self) -> None:
         """Send the Minecraft stop command."""
-        if not self.process or self.process.state() == QProcess.NotRunning:
+        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
             self.status_changed.emit("stopped")
             return
         self.send_command("stop")
         self.status_changed.emit("stopping")
 
     def kill_server(self) -> None:
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             self.process.kill()
             self.status_changed.emit("killed")
 
     def send_command(self, command: str) -> None:
-        if not self.process or self.process.state() == QProcess.NotRunning:
+        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
             raise ServiceError("Minecraft-сервер не запущен.")
         self.process.write(f"{command.strip()}\n".encode())
 

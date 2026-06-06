@@ -2,45 +2,97 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QLineEdit, QSpinBox, QVBoxLayout, QWidget
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QFormLayout,
+    QLineEdit,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 
 
 class SettingsTab(QWidget):
-    """Application settings placeholder."""
+    """Application settings."""
 
     def __init__(self, context: AppContext) -> None:
         super().__init__()
+        self.context = context
+        self.settings = QSettings("MineBridge", "MineBridge FRP")
 
-        theme = QComboBox()
-        theme.addItems(["system", "light", "dark"])
+        self.frp_path = PathPicker(file_mode=False)
+        self.frp_path.set_path(self.settings.value("frp_path", str(context.data_dir / "frp")))
 
-        language = QComboBox()
-        language.addItem("ru")
+        self.profile_path = QLineEdit(str(context.config_dir))
+        self.profile_path.setReadOnly(True)
 
-        close_behavior = QComboBox()
-        close_behavior.addItems(
+        self.theme = QComboBox()
+        self.theme.addItems(["system", "light", "dark"])
+        self.theme.setCurrentText(str(self.settings.value("theme", "system")))
+
+        self.language = QComboBox()
+        self.language.addItem("ru")
+
+        self.close_behavior = QComboBox()
+        self.close_behavior.addItems(
             ["спросить", "свернуть в трей", "остановить всё", "оставить сервер работать"]
         )
+        self.close_behavior.setCurrentText(str(self.settings.value("close_behavior", "спросить")))
 
-        timeout = QSpinBox()
-        timeout.setRange(1, 300)
-        timeout.setValue(30)
+        self.timeout = QSpinBox()
+        self.timeout.setRange(1, 300)
+        self.timeout.setValue(int(self.settings.value("diagnostics_timeout", 30)))
 
-        auto_update = QComboBox()
-        auto_update.addItems(["enabled", "disabled"])
+        self.auto_update = QComboBox()
+        self.auto_update.addItems(["enabled", "disabled"])
+        self.auto_update.setCurrentText(str(self.settings.value("auto_update_frp", "enabled")))
 
         form = QFormLayout()
-        form.addRow("Путь хранения FRP", PathPicker(file_mode=False))
-        form.addRow("Путь хранения профилей", QLineEdit(str(context.config_dir)))
-        form.addRow("Автообновление FRP", auto_update)
-        form.addRow("Тема интерфейса", theme)
-        form.addRow("Язык", language)
-        form.addRow("Таймаут диагностики, сек", timeout)
-        form.addRow("При закрытии приложения", close_behavior)
+        form.addRow("Путь хранения FRP", self.frp_path)
+        form.addRow("Путь хранения профилей", self.profile_path)
+        form.addRow("Автообновление FRP", self.auto_update)
+        form.addRow("Тема интерфейса", self.theme)
+        form.addRow("Язык", self.language)
+        form.addRow("Таймаут диагностики, сек", self.timeout)
+        form.addRow("При закрытии приложения", self.close_behavior)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addStretch(1)
+
+        self.theme.currentTextChanged.connect(self._save_theme)
+        self.close_behavior.currentTextChanged.connect(
+            lambda value: self.settings.setValue("close_behavior", value)
+        )
+        self.timeout.valueChanged.connect(
+            lambda value: self.settings.setValue("diagnostics_timeout", value)
+        )
+        self.auto_update.currentTextChanged.connect(
+            lambda value: self.settings.setValue("auto_update_frp", value)
+        )
+        self.frp_path.input.textChanged.connect(
+            lambda value: self.settings.setValue("frp_path", value)
+        )
+
+    def _save_theme(self, theme: str) -> None:
+        self.settings.setValue("theme", theme)
+        self._apply_theme(theme)
+
+    def _apply_theme(self, theme: str) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        if theme == "dark":
+            app.setStyleSheet(
+                "QWidget { background: #111827; color: #f9fafb; }"
+                "QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {"
+                " background: #1f2937; color: #f9fafb; border: 1px solid #374151; }"
+                "QPushButton { background: #374151; color: #f9fafb; padding: 6px 10px; }"
+            )
+        else:
+            app.setStyleSheet("")

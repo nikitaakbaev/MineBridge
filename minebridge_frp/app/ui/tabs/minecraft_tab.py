@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QProcess, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -269,7 +269,7 @@ class MinecraftTab(QWidget):
 
     def _offer_kill_if_still_running(self) -> None:
         process = self.manager.process
-        if not process or process.state() == process.NotRunning:
+        if not process or process.state() == QProcess.ProcessState.NotRunning:
             return
         answer = QMessageBox.question(
             self,

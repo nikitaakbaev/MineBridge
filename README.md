@@ -62,6 +62,23 @@ Stage 6 is implemented:
 - friend address display as VPS_IP:REMOTE_PORT;
 - stop-all action for local Minecraft/frpc and remote frps when available.
 
+Stage 7 is implemented:
+
+- Diagnostics tab runs active-profile checks in a background thread;
+- checks cover Java, server folder, server.jar, EULA, server.properties, ports, frpc, token, and VPS basics;
+- each result has OK / WARNING / ERROR status and a readable description;
+- safe fix actions are available for token generation, Java discovery, EULA opening, and server.properties generation;
+- diagnostics report summarizes all checks.
+
+Stage 8 is implemented:
+
+- status badges are used in quick start and diagnostics;
+- window geometry/state are saved and restored;
+- theme and close behavior are persisted through QSettings;
+- dark/light/system theme switching is available;
+- close behavior supports ask, tray minimize, stop-all, and leave-running modes;
+- tray icon is enabled when the platform provides a system tray.
+
 ## Requirements
 
 - Python 3.11+
@@ -97,4 +114,4 @@ minebridge-frp
 
 ## Roadmap
 
-The next stage adds a fuller diagnostics tab with per-check statuses and safe fix actions.
+The next stage adds broader unit tests and coverage around generated configs, ports, tokens, and models.

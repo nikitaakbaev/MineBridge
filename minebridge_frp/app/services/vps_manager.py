@@ -93,9 +93,16 @@ class VpsManager:
     def ensure_connected(self) -> None:
         if self.client is None:
             self.connect()
+            return
+
+        transport = self.client.get_transport()
+        if transport is None or not transport.is_active():
+            self.close()
+            self.connect()
 
     def exec(self, command: str, sudo: bool = False, timeout: float = 60.0) -> CommandResult:
         """Run a remote shell command."""
+        self.ensure_connected()
         if self.client is None:
             raise ServiceError("SSH не подключён.")
 

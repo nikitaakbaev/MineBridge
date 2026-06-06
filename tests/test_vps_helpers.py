@@ -1,10 +1,55 @@
 from __future__ import annotations
 
+from minebridge_frp.app.models.vps import VpsConfig
 from minebridge_frp.app.services.firewall_service import (
     firewall_detection_command,
     firewall_open_port_command,
 )
 from minebridge_frp.app.services.systemd_service import SERVICE_NAME, create_frps_systemd_unit
+from minebridge_frp.app.services.vps_manager import VpsManager
+
+
+class _FakeChannel:
+    def recv_exit_status(self) -> int:
+        return 0
+
+
+class _FakeStream:
+    channel = _FakeChannel()
+
+    def __init__(self, text: str = "") -> None:
+        self.text = text
+
+    def read(self) -> bytes:
+        return self.text.encode("utf-8")
+
+
+class _FakeTransport:
+    def is_active(self) -> bool:
+        return True
+
+
+class _FakeSshClient:
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+
+    def get_transport(self) -> _FakeTransport:
+        return _FakeTransport()
+
+    def exec_command(self, command: str, timeout: float, get_pty: bool):
+        self.commands.append(command)
+        return _FakeStream(), _FakeStream("ok"), _FakeStream()
+
+
+class _AutoConnectVpsManager(VpsManager):
+    def __init__(self) -> None:
+        super().__init__(VpsConfig(host="vps.example.com", username="root"), password="secret")
+        self.connect_count = 0
+        self.fake_client = _FakeSshClient()
+
+    def connect(self, timeout: float = 15.0) -> None:
+        self.connect_count += 1
+        self.client = self.fake_client
 
 
 def test_systemd_unit_uses_minebridge_service_name_and_paths():
@@ -23,3 +68,13 @@ def test_firewall_open_port_commands_are_specific():
     )
     assert firewall_open_port_command("unknown", 25565) is None
     assert "ufw" in firewall_detection_command()
+
+
+def test_vps_commands_auto_connect_before_exec():
+    manager = _AutoConnectVpsManager()
+
+    result = manager.restart_frps()
+
+    assert result.stdout == "ok"
+    assert manager.connect_count == 1
+    assert manager.fake_client.commands == ["systemctl restart minebridge-frps"]

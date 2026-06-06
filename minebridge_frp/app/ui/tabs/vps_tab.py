@@ -296,7 +296,7 @@ class VpsTab(QWidget):
     def _on_action_done(self, title: str, output: object) -> None:
         text = str(output).strip() or "OK"
         self._append_log(text)
-        QMessageBox.information(self, "VPS", f"{title}: OK")
+        self._show_status(f"{title}: OK")
 
     def _on_action_failed(self, message: str) -> None:
         self._append_log(message)
@@ -304,3 +304,8 @@ class VpsTab(QWidget):
 
     def _append_log(self, line: str) -> None:
         self.log_viewer.append_line(line)
+
+    def _show_status(self, message: str) -> None:
+        window = self.window()
+        if hasattr(window, "statusBar"):
+            window.statusBar().showMessage(message, 5000)

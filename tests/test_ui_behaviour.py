@@ -4,7 +4,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QTimer  # noqa: E402
+from PySide6.QtCore import QThread, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
@@ -25,12 +25,15 @@ def test_run_in_thread_keeps_worker_alive_until_finished():
     results = []
     errors = []
     finished = []
+    callback_threads = []
 
     def finish(value: object) -> None:
         results.append(value)
+        callback_threads.append(QThread.currentThread())
 
     def fail(message: str) -> None:
         errors.append(message)
+        callback_threads.append(QThread.currentThread())
 
     thread = run_in_thread(lambda: "worker-ran", finish, fail)
     thread.finished.connect(lambda: finished.append(True))
@@ -42,6 +45,7 @@ def test_run_in_thread_keeps_worker_alive_until_finished():
     assert finished == [True]
     assert results == ["worker-ran"]
     assert errors == []
+    assert callback_threads == [app.thread()]
 
 
 def test_vps_tab_saves_settings_from_ui(tmp_path):

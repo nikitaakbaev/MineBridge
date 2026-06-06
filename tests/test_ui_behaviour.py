@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
 from minebridge_frp.app.services.profile_service import ProfileService  # noqa: E402
+from minebridge_frp.app.ui.tabs.logs_tab import LogsTab  # noqa: E402
 from minebridge_frp.app.ui.tabs.vps_tab import VpsTab  # noqa: E402
 from minebridge_frp.app.ui.workers import run_in_thread  # noqa: E402
 
@@ -85,3 +86,25 @@ def test_vps_tab_saves_settings_from_ui(tmp_path):
     reloaded_tab = VpsTab(context, profile_service)
 
     assert reloaded_tab.password.text() == "ssh-secret"
+
+
+def test_logs_tab_loads_and_filters_app_log(tmp_path):
+    _app()
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    (log_dir / "minebridge-frp.log").write_text(
+        "\n".join(
+            [
+                "2026-06-06 [INFO] minebridge_frp.app.main: Starting MineBridge FRP",
+                "2026-06-06 [INFO] paramiko.transport: Authentication successful",
+                "2026-06-06 [INFO] frpc: login succeeded",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    tab = LogsTab(log_dir)
+
+    assert "Starting MineBridge" in tab.viewers["App logs"].text.toPlainText()
+    assert "paramiko.transport" in tab.viewers["SSH/VPS"].text.toPlainText()
+    assert "frpc: login succeeded" in tab.viewers["frpc"].text.toPlainText()

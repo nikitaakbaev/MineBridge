@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QProcess, QTimer
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QInputDialog,
-    QLabel,
     QLineEdit,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -24,6 +24,7 @@ from minebridge_frp.app.core.exceptions import ConfigurationError
 from minebridge_frp.app.models.profile import ProfileBundle
 from minebridge_frp.app.services.frp_manager import FrpManager
 from minebridge_frp.app.services.minecraft_manager import MinecraftManager
+from minebridge_frp.app.services.password_vault import PasswordVault
 from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.services.vps_manager import VpsManager
 from minebridge_frp.app.ui.widgets.status_badge import StatusBadge
@@ -38,6 +39,7 @@ class QuickStartTab(QWidget):
         super().__init__()
         self.context = context
         self.profile_service = profile_service
+        self.password_vault = PasswordVault(context.config_dir)
         self._loading_profiles = False
         self._threads = []
         self._quick_password = ""
@@ -83,8 +85,10 @@ class QuickStartTab(QWidget):
         buttons.addWidget(self.start_button)
         buttons.addWidget(self.stop_button)
 
-        self.checklist = QLabel("Чеклист ошибок появится после диагностики профиля.")
-        self.checklist.setWordWrap(True)
+        self.checklist = QPlainTextEdit()
+        self.checklist.setReadOnly(True)
+        self.checklist.setPlaceholderText("Ход запуска и ошибки появятся здесь.")
+        self.checklist.setMinimumHeight(180)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
@@ -151,16 +155,24 @@ class QuickStartTab(QWidget):
         self.start_button.setEnabled(False)
         self.vps_status.set_status("Проверяется", "warning")
         if bundle.vps.auth_type == "password":
-            password, ok = QInputDialog.getText(
-                self,
-                "SSH password",
-                "Пароль SSH для VPS:",
-                QLineEdit.Password,
-            )
-            if not ok:
-                self.start_button.setEnabled(True)
-                return
-            self._quick_password = password
+            try:
+                self._quick_password = self.password_vault.decrypt_password(
+                    bundle.vps.password_encrypted
+                )
+            except ConfigurationError as exc:
+                self._append_checklist(str(exc))
+                self._quick_password = ""
+            if not self._quick_password:
+                password, ok = QInputDialog.getText(
+                    self,
+                    "SSH password",
+                    "Пароль SSH для VPS:",
+                    QLineEdit.Password,
+                )
+                if not ok:
+                    self.start_button.setEnabled(True)
+                    return
+                self._quick_password = password
         self._check_vps_then_start_local(bundle)
 
     def _check_vps_then_start_local(self, bundle: ProfileBundle) -> None:
@@ -224,13 +236,65 @@ class QuickStartTab(QWidget):
                 bundle.profile.name or "default",
             )
             self.frp_manager.start_frpc(config_path)
-            self.frpc_status.set_status("Запущен", "ok")
-            address = f"{bundle.vps.host}:{bundle.tunnel.remote_port}"
-            self.address.setText(address)
-            self._append_checklist(f"Адрес для друзей: {address}")
-            self.start_button.setEnabled(True)
+            self.frpc_status.set_status("Проверяется", "warning")
+            self._append_checklist("frpc запущен, проверяю внешний порт туннеля.")
+            QTimer.singleShot(1500, lambda: self._verify_frpc_tunnel(bundle, attempts_left=12))
         except (ConfigurationError, Exception) as exc:  # noqa: BLE001
             self._on_quick_start_failed(str(exc))
+
+    def _verify_frpc_tunnel(self, bundle: ProfileBundle, attempts_left: int) -> None:
+        process = self.frp_manager.process
+        if process is None or process.state() == QProcess.ProcessState.NotRunning:
+            self.frpc_status.set_status("Ошибка", "error")
+            self._on_quick_start_failed(
+                "frpc завершился сразу после запуска. Частая причина: token в frpc.toml "
+                "не совпадает с token в frps.toml на VPS. Нажмите во вкладке VPS "
+                "«Установить FRP на VPS», затем запустите снова."
+            )
+            return
+
+        host = bundle.tunnel.frp_server_addr or bundle.vps.host
+        port = bundle.tunnel.remote_port
+        thread = run_in_thread(
+            lambda: self.frp_manager.check_external_port(host, port),
+            lambda result: self._on_tunnel_checked(
+                bundle,
+                host,
+                port,
+                bool(result),
+                attempts_left,
+            ),
+            self._on_quick_start_failed,
+        )
+        self._threads.append(thread)
+
+    def _on_tunnel_checked(
+        self,
+        bundle: ProfileBundle,
+        host: str,
+        port: int,
+        is_open: bool,
+        attempts_left: int,
+    ) -> None:
+        if is_open:
+            self.frpc_status.set_status("Запущен", "ok")
+            address = f"{host}:{port}"
+            self.address.setText(address)
+            self._append_checklist(f"Туннель подтверждён: {address} отвечает.")
+            self._append_checklist(f"Адрес для друзей: {address}")
+            self.start_button.setEnabled(True)
+            return
+
+        if attempts_left <= 0:
+            self.frpc_status.set_status("Не отвечает", "error")
+            self._on_quick_start_failed(
+                f"Внешний порт {host}:{port} не отвечает. Проверьте, что frps установлен "
+                "с текущим token, firewall открыл remote port, а frpc не пишет ошибку в логах."
+            )
+            return
+
+        self._append_checklist(f"Внешний порт {host}:{port} ещё не отвечает, повторяю проверку.")
+        QTimer.singleShot(1000, lambda: self._verify_frpc_tunnel(bundle, attempts_left - 1))
 
     def _stop_all(self) -> None:
         self.frp_manager.stop_frpc()
@@ -274,7 +338,7 @@ class QuickStartTab(QWidget):
             self.profile_service.save_profile(bundle)
 
     def _reset_run_state(self) -> None:
-        self.checklist.setText("")
+        self.checklist.clear()
         self.address.clear()
         self.vps_status.set_status("Не проверен", "warning")
         self.frps_status.set_status("Не запущен", "warning")
@@ -287,8 +351,7 @@ class QuickStartTab(QWidget):
         QMessageBox.warning(self, "Быстрый запуск", message)
 
     def _append_checklist(self, line: str) -> None:
-        current = self.checklist.text().strip()
-        self.checklist.setText(f"{current}\n{line}".strip())
+        self.checklist.appendPlainText(line.rstrip())
 
     def _create_profile(self) -> None:
         name, ok = QInputDialog.getText(self, "Новый профиль", "Название профиля:")

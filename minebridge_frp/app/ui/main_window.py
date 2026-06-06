@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.services.profile_service import ProfileService
+from minebridge_frp.app.ui.icons import load_app_icon
 from minebridge_frp.app.ui.tabs.diagnostics_tab import DiagnosticsTab
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab
 from minebridge_frp.app.ui.tabs.minecraft_tab import MinecraftTab
@@ -40,7 +41,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("MineBridge FRP")
         self.resize(1180, 800)
         self.setMinimumSize(1040, 680)
-        self.setWindowIcon(QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
+        icon = load_app_icon()
+        if icon.isNull():
+            icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        self.setWindowIcon(icon)
         self._restore_window_state()
         self._apply_saved_theme()
         self.tray_icon = self._create_tray_icon()

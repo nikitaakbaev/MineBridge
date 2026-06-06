@@ -126,6 +126,16 @@ or, after installation:
 minebridge-frp
 ```
 
+## Desktop Launcher
+
+On Linux, install the app menu launcher:
+
+```bash
+scripts/install_desktop_launcher.sh
+```
+
+It creates `MineBridge FRP` in the application menu and uses the project `.venv` through `scripts/run_minebridge_frp.sh`, so the app can be opened without typing a run command.
+
 ## Test
 
 ```bash

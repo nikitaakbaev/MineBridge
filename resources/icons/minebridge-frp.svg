@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="MineBridge FRP">
+  <defs>
+    <linearGradient id="bg" x1="36" y1="30" x2="220" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#19b37d"/>
+    </linearGradient>
+    <linearGradient id="block" x1="64" y1="58" x2="194" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#d8e7f5"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#172231"/>
+  <path d="M52 151c0-41 34-75 76-75 25 0 48 12 62 31" fill="none" stroke="url(#bg)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M204 105l-2 54c-1 20-18 37-38 37h-15" fill="none" stroke="url(#bg)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M179 82l21 24-31 8" fill="none" stroke="#19b37d" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M67 93l61-35 61 35v70l-61 35-61-35z" fill="url(#block)"/>
+  <path d="M67 93l61 35 61-35M128 128v70" fill="none" stroke="#172231" stroke-opacity=".3" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M91 113l37-21 37 21-37 21z" fill="#31c48d"/>
+  <path d="M98 151h60" stroke="#172231" stroke-width="14" stroke-linecap="round"/>
+  <path d="M110 170h36" stroke="#172231" stroke-width="14" stroke-linecap="round"/>
+</svg>

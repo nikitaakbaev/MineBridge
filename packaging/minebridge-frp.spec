@@ -17,7 +17,7 @@ a = Analysis(
     [str(ROOT / "minebridge_frp" / "app" / "main.py")],
     pathex=[str(ROOT)],
     binaries=[],
-    datas=[],
+    datas=[(str(ROOT / "resources" / "icons" / "minebridge-frp.svg"), "resources/icons")],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

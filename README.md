@@ -79,6 +79,23 @@ Stage 8 is implemented:
 - close behavior supports ask, tray minimize, stop-all, and leave-running modes;
 - tray icon is enabled when the platform provides a system tray.
 
+Stage 9 is implemented:
+
+- unit tests cover frpc.toml generation;
+- unit tests cover frps.toml generation with and without dashboard settings;
+- server.properties parsing and formatting are covered by round-trip tests;
+- local port probing is covered with a socket listener test;
+- token generation and token validation are covered;
+- Pydantic profile, VPS, Minecraft, and tunnel model validation is covered;
+- profile import/export safety is covered by database-id cleanup tests.
+
+Stage 10 is implemented:
+
+- PyInstaller spec is provided in `packaging/minebridge-frp.spec`;
+- Linux portable one-folder build script is provided in `scripts/build_linux.sh`;
+- Windows build script is provided in `scripts/build_windows.ps1`;
+- builds include application code only and do not bundle profile databases, FRP runtime downloads, `.env` files, or secrets.
+
 ## Requirements
 
 - Python 3.11+
@@ -112,6 +129,48 @@ or, after installation:
 minebridge-frp
 ```
 
+## Test
+
+```bash
+python -m compileall minebridge_frp tests
+ruff check .
+pytest
+```
+
+## Build With PyInstaller
+
+Install packaging dependencies:
+
+```bash
+pip install -e ".[packaging]"
+```
+
+Linux portable folder:
+
+```bash
+scripts/build_linux.sh
+```
+
+The output folder is:
+
+```text
+dist/MineBridge FRP
+```
+
+Windows executable folder from PowerShell:
+
+```powershell
+.\scripts\build_windows.ps1
+```
+
+The output executable is:
+
+```text
+dist\MineBridge FRP\MineBridge FRP.exe
+```
+
+Do not copy local runtime data into release builds. In particular, keep `.minebridge-frp/`, profile exports, SQLite databases, `.env` files, downloaded FRP archives/binaries, SSH keys, and passwords outside distributable artifacts.
+
 ## Roadmap
 
-The next stage adds broader unit tests and coverage around generated configs, ports, tokens, and models.
+Future stages can add signed installers, automatic FRP update checks, richer remote diagnostics, and guided first-run setup.

@@ -49,3 +49,43 @@ def test_create_frps_toml_keeps_dashboard_localhost():
     assert parsed["auth"]["token"] == token
     assert parsed["webServer"]["addr"] == "127.0.0.1"
     assert parsed["webServer"]["password"] == "dashboard-secret"
+
+
+def test_create_frps_toml_omits_dashboard_when_disabled():
+    token = generate_token()
+    parsed = tomllib.loads(create_frps_toml(bind_port=7001, token=token))
+
+    assert parsed == {
+        "bindPort": 7001,
+        "auth": {
+            "method": "token",
+            "token": token,
+        },
+    }
+
+
+def test_create_frpc_toml_uses_configured_ports_and_token():
+    token = generate_token()
+    config = TunnelConfig(
+        local_ip="192.168.0.10",
+        local_port=25570,
+        remote_port=25580,
+        frp_server_addr="193.0.2.10",
+        frp_server_bind_port=7100,
+        frp_token=token,
+    )
+
+    parsed = tomllib.loads(create_frpc_toml(config))
+
+    assert parsed["serverAddr"] == "193.0.2.10"
+    assert parsed["serverPort"] == 7100
+    assert parsed["auth"] == {"method": "token", "token": token}
+    assert parsed["proxies"] == [
+        {
+            "name": "minecraft",
+            "type": "tcp",
+            "localIP": "192.168.0.10",
+            "localPort": 25570,
+            "remotePort": 25580,
+        }
+    ]

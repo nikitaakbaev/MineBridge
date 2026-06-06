@@ -15,6 +15,34 @@ from minebridge_frp.app.utils.ports import is_port_open
 from minebridge_frp.app.utils.secrets import generate_token
 
 
+def create_frps_toml(
+    bind_port: int,
+    token: str,
+    dashboard_enabled: bool = False,
+    dashboard_port: int = 7500,
+    dashboard_user: str = "admin",
+    dashboard_password: str = "",
+) -> str:
+    """Create frps.toml text for the remote VPS side."""
+    document = tomlkit.document()
+    document.add("bindPort", bind_port)
+
+    auth = tomlkit.table()
+    auth.add("method", "token")
+    auth.add("token", token)
+    document.add("auth", auth)
+
+    if dashboard_enabled:
+        web_server = tomlkit.table()
+        web_server.add("addr", "127.0.0.1")
+        web_server.add("port", dashboard_port)
+        web_server.add("user", dashboard_user)
+        web_server.add("password", dashboard_password or generate_token(32))
+        document.add("webServer", web_server)
+
+    return tomlkit.dumps(document)
+
+
 def create_frpc_toml(config: TunnelConfig) -> str:
     """Create frpc.toml text for a Minecraft TCP tunnel."""
     document = tomlkit.document()

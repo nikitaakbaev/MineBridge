@@ -40,6 +40,28 @@ Stage 4 is implemented:
 - local frpc start/stop through QProcess;
 - realtime frpc logs and external port checks.
 
+Stage 5 is implemented:
+
+- SSH connections to VPS through paramiko;
+- remote command execution with sudo support;
+- SFTP upload helpers;
+- remote frps.toml generation;
+- minebridge-frps systemd unit generation and installation;
+- frps start/stop/restart/status controls;
+- ufw/firewalld port opening without disabling the firewall;
+- full remote frps installation flow for Linux amd64 VPS hosts.
+
+Stage 6 is implemented:
+
+- Quick Start profile validation;
+- Java and local Minecraft port checks;
+- VPS SSH/frps readiness check;
+- local Minecraft launch;
+- local port polling before tunnel startup;
+- frpc.toml generation and local frpc launch;
+- friend address display as VPS_IP:REMOTE_PORT;
+- stop-all action for local Minecraft/frpc and remote frps when available.
+
 ## Requirements
 
 - Python 3.11+
@@ -75,4 +97,4 @@ minebridge-frp
 
 ## Roadmap
 
-The next stage adds VPS SSH management, remote frps installation, systemd service setup, and firewall helpers.
+The next stage adds a fuller diagnostics tab with per-check statuses and safe fix actions.

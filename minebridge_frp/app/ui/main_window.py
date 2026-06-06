@@ -28,8 +28,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(960, 640)
 
         tabs = QTabWidget()
-        tabs.addTab(QuickStartTab(self.profile_service), "Быстрый запуск")
-        tabs.addTab(VpsTab(), "VPS")
+        tabs.addTab(QuickStartTab(context, self.profile_service), "Быстрый запуск")
+        tabs.addTab(VpsTab(context, self.profile_service), "VPS")
         tabs.addTab(MinecraftTab(self.profile_service), "Minecraft")
         tabs.addTab(TunnelTab(context, self.profile_service), "Туннель")
         tabs.addTab(DiagnosticsTab(), "Диагностика")

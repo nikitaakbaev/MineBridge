@@ -70,6 +70,9 @@ class FrpcTab(QWidget):
         self.auto_start_frpc.setChecked(True)
 
         form = QFormLayout()
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         form.addRow("Профиль", self.profile_name)
         form.addRow("Рабочая папка frpc", self.frpc_folder)
         form.addRow("Локальный IP Minecraft", self.local_ip)

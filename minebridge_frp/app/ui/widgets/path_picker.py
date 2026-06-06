@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLineEdit, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QSizePolicy,
+    QWidget,
+)
 
 
 class PathPicker(QWidget):
@@ -12,10 +19,18 @@ class PathPicker(QWidget):
 
     def __init__(self, file_mode: bool) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMaximumHeight(42)
         self.file_mode = file_mode
         self.input = QLineEdit()
+        self.input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.input.setMinimumHeight(34)
+        self.input.setMaximumHeight(42)
         self.button = QPushButton("...")
+        self.button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.button.setFixedWidth(36)
+        self.button.setMinimumHeight(34)
+        self.button.setMaximumHeight(42)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

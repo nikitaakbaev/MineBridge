@@ -5,10 +5,11 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QThread, QTimer  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QLineEdit, QScrollArea, QTabWidget  # noqa: E402
 
 from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
 from minebridge_frp.app.services.profile_service import ProfileService  # noqa: E402
+from minebridge_frp.app.ui.main_window import MainWindow  # noqa: E402
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab  # noqa: E402
 from minebridge_frp.app.ui.tabs.vps_tab import VpsTab  # noqa: E402
 from minebridge_frp.app.ui.workers import run_in_thread  # noqa: E402
@@ -106,3 +107,46 @@ def test_logs_tab_loads_and_filters_app_log(tmp_path):
     assert "Starting MineBridge" in tab.viewers["App logs"].text.toPlainText()
     assert "paramiko.transport" in tab.viewers["SSH/VPS"].text.toPlainText()
     assert "frpc: login succeeded" in tab.viewers["frpc"].text.toPlainText()
+
+
+def test_main_window_uses_scrollable_manual_workflow_tabs(tmp_path):
+    _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+
+    window = MainWindow(context)
+    tabs = window.centralWidget()
+
+    assert isinstance(tabs, QTabWidget)
+    labels = [tabs.tabText(index) for index in range(tabs.count())]
+    assert labels == ["VPS", "Minecraft", "frpc", "Диагностика", "Логи", "Настройки"]
+    assert "Быстрый запуск" not in labels
+    assert all(isinstance(tabs.widget(index), QScrollArea) for index in range(tabs.count()))
+
+
+def test_minecraft_form_fields_do_not_collapse_or_overstretch(tmp_path):
+    app = _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    window = MainWindow(context)
+    window.resize(1038, 712)
+    window.show()
+    app.processEvents()
+
+    tabs = window.centralWidget()
+    minecraft_scroll = tabs.widget(1)
+    minecraft_tab = minecraft_scroll.widget()
+    line_heights = [field.height() for field in minecraft_tab.findChildren(QLineEdit)]
+
+    assert min(line_heights) >= 28
+    assert max(line_heights[:3]) <= 42

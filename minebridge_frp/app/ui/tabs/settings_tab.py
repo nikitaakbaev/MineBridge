@@ -54,6 +54,9 @@ class SettingsTab(QWidget):
         self.auto_update.setCurrentText(str(self.settings.value("auto_update_frp", "enabled")))
 
         form = QFormLayout()
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         form.addRow("Путь хранения FRP", self.frp_path)
         form.addRow("Путь хранения профилей", self.profile_path)
         form.addRow("Автообновление FRP", self.auto_update)

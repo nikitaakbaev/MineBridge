@@ -62,6 +62,9 @@ class VpsTab(QWidget):
         self.dashboard_enabled = QCheckBox()
 
         form = QFormLayout()
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         form.addRow("VPS IP / host", self.host)
         form.addRow("SSH port", self.ssh_port)
         form.addRow("SSH username", self.username)

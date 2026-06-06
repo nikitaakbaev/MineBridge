@@ -20,6 +20,12 @@ COMMON_STYLESHEET = """
 QWidget {
     font-size: 13px;
 }
+QScrollArea {
+    border: none;
+}
+QScrollArea > QWidget > QWidget {
+    padding: 10px;
+}
 QTabWidget::pane {
     border: 1px solid palette(mid);
     top: -1px;
@@ -45,13 +51,24 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
     border: 1px solid palette(mid);
     border-radius: 5px;
     padding: 6px;
+    min-height: 28px;
     selection-background-color: #2563eb;
+}
+QCheckBox {
+    min-height: 28px;
+    spacing: 8px;
+}
+QComboBox::drop-down {
+    width: 28px;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+    width: 22px;
 }
 QPushButton {
     border: 1px solid palette(mid);
     border-radius: 5px;
     padding: 7px 11px;
-    min-height: 24px;
+    min-height: 30px;
 }
 QPushButton:hover {
     border-color: #2563eb;

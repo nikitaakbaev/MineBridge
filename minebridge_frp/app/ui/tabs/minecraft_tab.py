@@ -76,6 +76,9 @@ class MinecraftTab(QWidget):
         self.motd = QLineEdit("MineBridge FRP server")
 
         form = QFormLayout()
+        form.setHorizontalSpacing(18)
+        form.setVerticalSpacing(8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         form.addRow("Папка сервера", self.server_dir)
         form.addRow("server.jar", self.jar_path)
         form.addRow("Java path", self.java_path)

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
 from minebridge_frp.app.models.tunnel import TunnelConfig
+from minebridge_frp.app.services.download_service import DownloadService
 from minebridge_frp.app.services.frp_manager import FrpManager
 from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
@@ -78,6 +79,7 @@ class TunnelTab(QWidget):
         actions = QGroupBox("Действия туннеля")
         grid = QGridLayout(actions)
         buttons = [
+            ("Сохранить настройки", self._save_clicked),
             ("Сгенерировать токен", self._generate_token),
             ("Создать frpc.toml", self._create_frpc_config),
             ("Скачать frpc", self._download_frpc),
@@ -136,7 +138,17 @@ class TunnelTab(QWidget):
     def _generate_token(self) -> None:
         token = self.manager.generate_token()
         self.token.setText(token)
-        self._append_log("Новый FRP token сгенерирован.")
+        self._save_profile_config()
+        self._append_log("Новый FRP token сгенерирован и сохранён.")
+
+    def _save_clicked(self) -> None:
+        try:
+            self._save_profile_config()
+        except (ConfigurationError, ValueError) as exc:
+            QMessageBox.warning(self, "Туннель", str(exc))
+            return
+        self._append_log("Настройки туннеля сохранены.")
+        QMessageBox.information(self, "Туннель", "Настройки туннеля сохранены.")
 
     def _create_frpc_config(self) -> Path | None:
         try:
@@ -154,12 +166,23 @@ class TunnelTab(QWidget):
 
     def _download_frpc(self) -> None:
         self._append_log("Скачивание FRP latest release...")
+        storage_dir = self.context.data_dir / "frp"
         thread = run_in_thread(
-            lambda: self.manager.download_frpc(),
+            lambda: self._download_frpc_in_background(storage_dir),
             self._on_download_finished,
             self._show_error,
         )
         self._threads.append(thread)
+        thread.finished.connect(
+            lambda: self._threads.remove(thread) if thread in self._threads else None
+        )
+
+    def _download_frpc_in_background(self, storage_dir: Path) -> Path:
+        extracted = DownloadService(storage_dir).download_frp()
+        binary = FrpManager(storage_dir).find_frpc_binary(extracted)
+        if binary is None:
+            raise ServiceError("После распаковки FRP бинарник frpc не найден.")
+        return binary
 
     def _on_download_finished(self, binary_path: object) -> None:
         self._append_log(f"frpc готов: {binary_path}")
@@ -193,6 +216,9 @@ class TunnelTab(QWidget):
             self._show_error,
         )
         self._threads.append(thread)
+        thread.finished.connect(
+            lambda: self._threads.remove(thread) if thread in self._threads else None
+        )
 
     def _on_port_check_finished(self, host: str, port: int, is_open: bool) -> None:
         status = "открыт" if is_open else "не отвечает"

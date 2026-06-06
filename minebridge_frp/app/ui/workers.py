@@ -33,6 +33,7 @@ def run_in_thread(
     """Start a callable in a QThread and return the running thread."""
     thread = QThread()
     worker = FunctionWorker(function)
+    thread._minebridge_worker = worker  # type: ignore[attr-defined]
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
     worker.finished.connect(on_finished)
@@ -42,5 +43,11 @@ def run_in_thread(
     worker.finished.connect(worker.deleteLater)
     worker.failed.connect(worker.deleteLater)
     thread.finished.connect(thread.deleteLater)
+
+    def clear_worker_reference() -> None:
+        thread._minebridge_worker = None  # type: ignore[attr-defined]
+
+    thread._minebridge_cleanup = clear_worker_reference  # type: ignore[attr-defined]
+    thread.finished.connect(clear_worker_reference)
     thread.start()
     return thread

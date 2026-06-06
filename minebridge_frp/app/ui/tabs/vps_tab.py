@@ -34,6 +34,7 @@ class VpsTab(QWidget):
         self.context = context
         self.profile_service = profile_service
         self._threads = []
+        self._autosave_enabled = False
 
         self.host = QLineEdit()
         self.ssh_port = QSpinBox()
@@ -73,6 +74,7 @@ class VpsTab(QWidget):
         actions = QGroupBox("Действия VPS")
         grid = QGridLayout(actions)
         buttons = [
+            ("Сохранить настройки", self._save_clicked),
             ("Проверить SSH", self._check_ssh),
             ("Установить FRP на VPS", self._install_frp),
             ("Обновить FRP на VPS", self._install_frp),
@@ -97,6 +99,8 @@ class VpsTab(QWidget):
         layout.addWidget(self.log_viewer)
 
         self._load_active_profile()
+        self._connect_autosave()
+        self._autosave_enabled = True
 
     def _load_active_profile(self) -> None:
         config = self.profile_service.get_active_profile().vps
@@ -132,18 +136,25 @@ class VpsTab(QWidget):
         self.profile_service.save_profile(bundle)
         return config
 
-    def _manager(self) -> VpsManager:
+    def _manager(self, config: VpsConfig, password: str) -> VpsManager:
         return VpsManager(
-            self._save_profile_config(),
-            password=self.password.text(),
+            config,
+            password=password,
             frp_storage_dir=self.context.data_dir / "frp",
         )
 
     def _run_vps_action(self, title: str, method_name: str) -> None:
+        try:
+            config = self._save_profile_config()
+            password = self.password.text()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+
         self._append_log(f"{title}...")
 
         def action() -> str:
-            manager = self._manager()
+            manager = self._manager(config, password)
             try:
                 method = getattr(manager, method_name)
                 result = method()
@@ -154,10 +165,17 @@ class VpsTab(QWidget):
         self._start_thread(action, lambda output: self._on_action_done(title, output))
 
     def _check_ssh(self) -> None:
+        try:
+            config = self._save_profile_config()
+            password = self.password.text()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+
         self._append_log("Проверка SSH...")
 
         def action() -> str:
-            manager = self._manager()
+            manager = self._manager(config, password)
             try:
                 return manager.check_ssh().stdout.strip()
             finally:
@@ -166,14 +184,22 @@ class VpsTab(QWidget):
         self._start_thread(action, lambda output: self._on_action_done("SSH", output))
 
     def _install_frp(self) -> None:
-        self._append_log("Установка FRP на VPS...")
-
-        def action() -> str:
+        try:
+            self._save_profile_config()
             bundle = self.profile_service.get_active_profile()
             token = bundle.tunnel.frp_token
             if not token:
                 raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке Туннель.")
-            manager = self._manager()
+            config = bundle.vps
+            password = self.password.text()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+
+        self._append_log("Установка FRP на VPS...")
+
+        def action() -> str:
+            manager = self._manager(config, password)
             try:
                 manager.install_frps_on_vps(token)
                 return "FRP установлен, systemd-сервис перезапущен."
@@ -183,14 +209,22 @@ class VpsTab(QWidget):
         self._start_thread(action, lambda output: self._on_action_done("Установка FRP", output))
 
     def _create_frps_toml(self) -> None:
-        self._append_log("Создание frps.toml...")
-
-        def action() -> str:
+        try:
+            self._save_profile_config()
             bundle = self.profile_service.get_active_profile()
             token = bundle.tunnel.frp_token
             if not token:
                 raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке Туннель.")
-            manager = self._manager()
+            config = bundle.vps
+            password = self.password.text()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+
+        self._append_log("Создание frps.toml...")
+
+        def action() -> str:
+            manager = self._manager(config, password)
             try:
                 return manager.create_frps_config(token)
             finally:
@@ -205,20 +239,59 @@ class VpsTab(QWidget):
         self._run_vps_action("Статус frps", "status_frps")
 
     def _open_firewall(self) -> None:
+        try:
+            config = self._save_profile_config()
+            password = self.password.text()
+            port = self.bind_port.value()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+
         self._append_log("Открытие firewall порта...")
 
         def action() -> str:
-            manager = self._manager()
+            manager = self._manager(config, password)
             try:
-                return manager.open_firewall_port(self.bind_port.value())
+                return manager.open_firewall_port(port)
             finally:
                 manager.close()
 
         self._start_thread(action, lambda output: self._on_action_done("Firewall", output))
 
+    def _save_clicked(self) -> None:
+        try:
+            self._save_profile_config()
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+        self._append_log("Настройки VPS сохранены.")
+        QMessageBox.information(self, "VPS", "Настройки VPS сохранены.")
+
+    def _connect_autosave(self) -> None:
+        self.host.editingFinished.connect(self._autosave)
+        self.username.editingFinished.connect(self._autosave)
+        self.auth_type.currentTextChanged.connect(self._autosave)
+        self.private_key_path.input.editingFinished.connect(self._autosave)
+        self.install_dir.editingFinished.connect(self._autosave)
+        self.ssh_port.valueChanged.connect(self._autosave)
+        self.bind_port.valueChanged.connect(self._autosave)
+        self.dashboard_enabled.toggled.connect(self._autosave)
+        self.dashboard_port.valueChanged.connect(self._autosave)
+
+    def _autosave(self, *_args: object) -> None:
+        if not self._autosave_enabled:
+            return
+        try:
+            self._save_profile_config()
+        except (ConfigurationError, ValueError) as exc:
+            self._append_log(f"Не удалось сохранить настройки VPS: {exc}")
+
     def _start_thread(self, function, on_finished) -> None:
         thread = run_in_thread(function, on_finished, self._on_action_failed)
         self._threads.append(thread)
+        thread.finished.connect(
+            lambda: self._threads.remove(thread) if thread in self._threads else None
+        )
 
     def _on_action_done(self, title: str, output: object) -> None:
         text = str(output).strip() or "OK"

@@ -21,6 +21,25 @@ Stage 2 is implemented:
 - profile listing and active profile selection;
 - profile JSON import/export from the Quick Start tab.
 
+Stage 3 is implemented:
+
+- Minecraft tab is connected to the active profile;
+- Java discovery and version checks;
+- server folder and server.jar selection;
+- server.properties read/write helpers;
+- explicit EULA handling without silent acceptance;
+- local Minecraft server start/stop/restart through QProcess;
+- realtime Minecraft log output and stdin command console.
+
+Stage 4 is implemented:
+
+- secure FRP token generation;
+- frpc.toml generation with tomlkit;
+- current OS/architecture detection for FRP assets;
+- FRP download and archive extraction helpers;
+- local frpc start/stop through QProcess;
+- realtime frpc logs and external port checks.
+
 ## Requirements
 
 - Python 3.11+
@@ -56,4 +75,4 @@ minebridge-frp
 
 ## Roadmap
 
-The next stage adds Minecraft GUI behavior and the Minecraft manager.
+The next stage adds VPS SSH management, remote frps installation, systemd service setup, and firewall helpers.

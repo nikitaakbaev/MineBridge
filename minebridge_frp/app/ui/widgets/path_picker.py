@@ -28,6 +28,9 @@ class PathPicker(QWidget):
         value = self.input.text().strip()
         return Path(value) if value else None
 
+    def text(self) -> str:
+        return self.input.text().strip()
+
     def set_path(self, path: str | Path) -> None:
         self.input.setText(str(path))
 
@@ -38,4 +41,3 @@ class PathPicker(QWidget):
             path = QFileDialog.getExistingDirectory(self, "Выберите папку")
         if path:
             self.input.setText(path)
-

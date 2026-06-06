@@ -68,9 +68,9 @@ class VpsTab(QWidget):
         form.addRow("Auth type", self.auth_type)
         form.addRow("Password", self.password)
         form.addRow("Private key path", self.private_key_path)
-        form.addRow("Remote install dir", self.install_dir)
-        form.addRow("frps bind port", self.bind_port)
-        form.addRow("Dashboard enabled", self.dashboard_enabled)
+        form.addRow("Папка frps на VPS", self.install_dir)
+        form.addRow("Порт frps на VPS", self.bind_port)
+        form.addRow("Dashboard включен", self.dashboard_enabled)
         form.addRow("Dashboard port", self.dashboard_port)
 
         actions = QGroupBox("Действия VPS")
@@ -78,8 +78,8 @@ class VpsTab(QWidget):
         buttons = [
             ("Сохранить настройки", self._save_clicked),
             ("Проверить SSH", self._check_ssh),
-            ("Установить FRP на VPS", self._install_frp),
-            ("Обновить FRP на VPS", self._install_frp),
+            ("Скачать и установить frps на VPS", self._install_frp),
+            ("Обновить frps на VPS", self._install_frp),
             ("Создать frps.toml", self._create_frps_toml),
             ("Установить systemd-сервис", self._install_systemd),
             ("Запустить frps", lambda: self._run_vps_action("Запуск frps", "start_frps")),

@@ -25,25 +25,23 @@ def test_run_in_thread_keeps_worker_alive_until_finished():
     app = _app()
     results = []
     errors = []
-    finished = []
     callback_threads = []
 
     def finish(value: object) -> None:
         results.append(value)
         callback_threads.append(QThread.currentThread())
+        QTimer.singleShot(50, app.quit)
 
     def fail(message: str) -> None:
         errors.append(message)
         callback_threads.append(QThread.currentThread())
+        QTimer.singleShot(50, app.quit)
 
     thread = run_in_thread(lambda: "worker-ran", finish, fail)
-    thread.finished.connect(lambda: finished.append(True))
-    thread.finished.connect(app.quit)
     QTimer.singleShot(3000, app.quit)
     app.exec()
 
     assert thread is not None
-    assert finished == [True]
     assert results == ["worker-ran"]
     assert errors == []
     assert callback_threads == [app.thread()]

@@ -227,17 +227,78 @@ class VpsManager:
     def install_frps_on_vps(self, token: str) -> None:
         """Install frps binary, config, and systemd service on the VPS."""
         self.ensure_connected()
-        binary = self._ensure_linux_frps_binary()
-        remote_dir = self.config.install_dir.rstrip("/")
-        self.exec(f"mkdir -p {shlex.quote(remote_dir)}", sudo=True)
-        self.upload_file(binary, f"{remote_dir}/frps", sudo=True)
-        self.exec(f"chmod +x {shlex.quote(remote_dir)}/frps", sudo=True)
+        self._install_linux_frps_binary()
         self.create_frps_config(token)
         self.install_systemd_service()
         self.restart_frps()
         status = self.status_frps()
         if not status.ok:
             raise ServiceError(status.stderr or status.stdout or "frps не запущен после установки.")
+
+    def _install_linux_frps_binary(self) -> None:
+        try:
+            self._install_linux_frps_binary_remote_download()
+        except ServiceError as remote_exc:
+            try:
+                self._install_linux_frps_binary_upload()
+            except Exception as upload_exc:  # noqa: BLE001 - report both installation paths.
+                raise ServiceError(
+                    "Не удалось установить frps на VPS.\n"
+                    f"Remote download error: {remote_exc}\n"
+                    f"SFTP upload fallback error: {upload_exc}"
+                ) from upload_exc
+
+    def _install_linux_frps_binary_remote_download(self) -> None:
+        remote_dir = self.config.install_dir.rstrip("/")
+        command = f"""
+set -eu
+remote_dir={shlex.quote(remote_dir)}
+api_url=https://api.github.com/repos/fatedier/frp/releases/latest
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+mkdir -p "$remote_dir"
+if command -v curl >/dev/null 2>&1; then
+  release_json=$(curl -fsSL "$api_url")
+elif command -v wget >/dev/null 2>&1; then
+  release_json=$(wget -qO- "$api_url")
+else
+  echo "curl or wget is required on VPS to download FRP" >&2
+  exit 127
+fi
+asset_url=$(
+  printf '%s' "$release_json" \
+    | grep browser_download_url \
+    | grep linux_amd64 \
+    | grep '.tar.gz' \
+    | head -n 1 \
+    | cut -d '"' -f 4
+)
+if [ -z "$asset_url" ]; then
+  echo "linux_amd64 FRP asset was not found in latest release" >&2
+  exit 2
+fi
+archive="$tmp_dir/frp-linux-amd64.tar.gz"
+if command -v curl >/dev/null 2>&1; then
+  curl -fL "$asset_url" -o "$archive"
+else
+  wget -O "$archive" "$asset_url"
+fi
+tar -xzf "$archive" -C "$tmp_dir"
+frps_path=$(find "$tmp_dir" -type f -name frps | head -n 1)
+if [ -z "$frps_path" ]; then
+  echo "frps binary was not found after extraction" >&2
+  exit 3
+fi
+install -m 0755 "$frps_path" "$remote_dir/frps"
+"""
+        self.exec(command, sudo=True, timeout=180)
+
+    def _install_linux_frps_binary_upload(self) -> None:
+        binary = self._ensure_linux_frps_binary()
+        remote_dir = self.config.install_dir.rstrip("/")
+        self.exec(f"mkdir -p {shlex.quote(remote_dir)}", sudo=True)
+        self.upload_file(binary, f"{remote_dir}/frps", sudo=True)
+        self.exec(f"chmod +x {shlex.quote(remote_dir)}/frps", sudo=True)
 
     def _ensure_linux_frps_binary(self) -> Path:
         storage = self.frp_storage_dir

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QStyle,
     QSystemTrayIcon,
     QTabWidget,
 )
@@ -18,10 +19,10 @@ from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.ui.tabs.diagnostics_tab import DiagnosticsTab
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab
 from minebridge_frp.app.ui.tabs.minecraft_tab import MinecraftTab
-from minebridge_frp.app.ui.tabs.quick_start_tab import QuickStartTab
 from minebridge_frp.app.ui.tabs.settings_tab import SettingsTab
-from minebridge_frp.app.ui.tabs.tunnel_tab import TunnelTab
+from minebridge_frp.app.ui.tabs.tunnel_tab import FrpcTab
 from minebridge_frp.app.ui.tabs.vps_tab import VpsTab
+from minebridge_frp.app.ui.theme import apply_theme
 
 
 class MainWindow(QMainWindow):
@@ -35,18 +36,19 @@ class MainWindow(QMainWindow):
         self._force_quit = False
 
         self.setWindowTitle("MineBridge FRP")
-        self.resize(1120, 760)
-        self.setMinimumSize(960, 640)
+        self.resize(1180, 800)
+        self.setMinimumSize(1040, 680)
+        self.setWindowIcon(QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
         self._restore_window_state()
         self._apply_saved_theme()
         self.tray_icon = self._create_tray_icon()
 
         tabs = QTabWidget()
-        self.quick_start_tab = QuickStartTab(context, self.profile_service)
-        tabs.addTab(self.quick_start_tab, "Быстрый запуск")
+        self.minecraft_tab = MinecraftTab(self.profile_service)
+        self.frpc_tab = FrpcTab(context, self.profile_service)
         tabs.addTab(VpsTab(context, self.profile_service), "VPS")
-        tabs.addTab(MinecraftTab(self.profile_service), "Minecraft")
-        tabs.addTab(TunnelTab(context, self.profile_service), "Туннель")
+        tabs.addTab(self.minecraft_tab, "Minecraft")
+        tabs.addTab(self.frpc_tab, "frpc")
         tabs.addTab(DiagnosticsTab(context, self.profile_service), "Диагностика")
         tabs.addTab(LogsTab(context.log_dir), "Логи")
         tabs.addTab(SettingsTab(context), "Настройки")
@@ -82,7 +84,8 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
         elif behavior == "остановить всё":
-            self.quick_start_tab._stop_all()
+            self.frpc_tab._stop_frpc()
+            self.minecraft_tab.manager.stop_server_gracefully()
 
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("windowState", self.saveState())
@@ -94,8 +97,7 @@ class MainWindow(QMainWindow):
 
         tray = QSystemTrayIcon(self)
         tray.setToolTip("MineBridge FRP")
-        if not self.windowIcon().isNull():
-            tray.setIcon(self.windowIcon())
+        tray.setIcon(self.windowIcon())
 
         menu = QMenu(self)
         show_action = QAction("Показать", self)
@@ -126,14 +128,4 @@ class MainWindow(QMainWindow):
         app = QApplication.instance()
         if app is None:
             return
-        if theme == "dark":
-            app.setStyleSheet(
-                "QWidget { background: #111827; color: #f9fafb; }"
-                "QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {"
-                " background: #1f2937; color: #f9fafb; border: 1px solid #374151; }"
-                "QPushButton { background: #374151; color: #f9fafb; padding: 6px 10px; }"
-            )
-        elif theme == "light":
-            app.setStyleSheet("")
-        else:
-            app.setStyleSheet("")
+        apply_theme(app, str(theme))

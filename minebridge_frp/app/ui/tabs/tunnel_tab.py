@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -28,7 +30,7 @@ from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.workers import run_in_thread
 
 
-class TunnelTab(QWidget):
+class FrpcTab(QWidget):
     """Local frpc configuration and controls."""
 
     def __init__(self, context: AppContext, profile_service: ProfileService) -> None:
@@ -42,6 +44,8 @@ class TunnelTab(QWidget):
         self._threads = []
 
         self.profile_name = QLineEdit("default")
+        self.frpc_folder = QLineEdit()
+        self.frpc_folder.setReadOnly(True)
         self.local_ip = QLineEdit("127.0.0.1")
 
         self.local_port = QSpinBox()
@@ -66,33 +70,35 @@ class TunnelTab(QWidget):
         self.auto_start_frpc.setChecked(True)
 
         form = QFormLayout()
-        form.addRow("Profile name", self.profile_name)
-        form.addRow("Local IP", self.local_ip)
-        form.addRow("Local port", self.local_port)
-        form.addRow("Remote port", self.remote_port)
+        form.addRow("Профиль", self.profile_name)
+        form.addRow("Рабочая папка frpc", self.frpc_folder)
+        form.addRow("Локальный IP Minecraft", self.local_ip)
+        form.addRow("Локальный порт Minecraft", self.local_port)
+        form.addRow("Публичный порт на VPS", self.remote_port)
         form.addRow("Protocol", self.protocol)
-        form.addRow("FRP server address", self.server_addr)
-        form.addRow("FRP server bind port", self.server_port)
-        form.addRow("Auth token", self.token)
-        form.addRow("Auto-start frpc with Minecraft", self.auto_start_frpc)
+        form.addRow("Адрес VPS / frps", self.server_addr)
+        form.addRow("Порт frps на VPS", self.server_port)
+        form.addRow("FRP token", self.token)
+        form.addRow("Автозапуск frpc вместе с Minecraft", self.auto_start_frpc)
 
-        actions = QGroupBox("Действия туннеля")
+        actions = QGroupBox("Действия frpc")
         grid = QGridLayout(actions)
         buttons = [
             ("Сохранить настройки", self._save_clicked),
             ("Сгенерировать токен", self._generate_token),
             ("Создать frpc.toml", self._create_frpc_config),
-            ("Скачать frpc", self._download_frpc),
-            ("Запустить frpc", self._start_frpc),
+            ("Скачать frpc локально", self._download_frpc),
+            ("Запустить frpc локально", self._start_frpc),
             ("Остановить frpc", self._stop_frpc),
             ("Проверить внешний порт", self._check_external_port),
+            ("Открыть рабочую папку", self._open_frpc_folder),
         ]
         for index, (label, callback) in enumerate(buttons):
             button = QPushButton(label)
             button.clicked.connect(callback)
             grid.addWidget(button, index // 3, index % 3)
 
-        self.log_viewer = LogViewer("frpc logs")
+        self.log_viewer = LogViewer("Логи локального frpc")
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
@@ -105,6 +111,7 @@ class TunnelTab(QWidget):
         bundle = self.profile_service.get_active_profile()
         config = bundle.tunnel
         self.profile_name.setText(bundle.profile.name)
+        self.frpc_folder.setText(str(self._profile_frpc_dir(bundle.profile.name)))
         self.local_ip.setText(config.local_ip)
         self.local_port.setValue(config.local_port)
         self.remote_port.setValue(config.remote_port)
@@ -145,10 +152,10 @@ class TunnelTab(QWidget):
         try:
             self._save_profile_config()
         except (ConfigurationError, ValueError) as exc:
-            QMessageBox.warning(self, "Туннель", str(exc))
+            QMessageBox.warning(self, "frpc", str(exc))
             return
         self._append_log("Настройки туннеля сохранены.")
-        QMessageBox.information(self, "Туннель", "Настройки туннеля сохранены.")
+        QMessageBox.information(self, "frpc", "Настройки frpc сохранены.")
 
     def _create_frpc_config(self) -> Path | None:
         try:
@@ -158,10 +165,11 @@ class TunnelTab(QWidget):
                 self.profile_name.text().strip() or "default",
             )
             self._append_log(f"frpc.toml создан: {path}")
-            QMessageBox.information(self, "Туннель", f"frpc.toml создан:\n{path}")
+            self.frpc_folder.setText(str(path.parent))
+            QMessageBox.information(self, "frpc", f"frpc.toml создан:\n{path}")
             return path
         except (ConfigurationError, ValueError, OSError) as exc:
-            QMessageBox.warning(self, "Туннель", str(exc))
+            QMessageBox.warning(self, "frpc", str(exc))
             return None
 
     def _download_frpc(self) -> None:
@@ -186,7 +194,7 @@ class TunnelTab(QWidget):
 
     def _on_download_finished(self, binary_path: object) -> None:
         self._append_log(f"frpc готов: {binary_path}")
-        QMessageBox.information(self, "Туннель", f"frpc скачан:\n{binary_path}")
+        QMessageBox.information(self, "frpc", f"frpc скачан:\n{binary_path}")
 
     def _start_frpc(self) -> None:
         try:
@@ -196,7 +204,7 @@ class TunnelTab(QWidget):
             self.manager.start_frpc(config_path)
             self._append_log("frpc запускается...")
         except (ConfigurationError, ServiceError) as exc:
-            QMessageBox.warning(self, "Туннель", str(exc))
+            QMessageBox.warning(self, "frpc", str(exc))
 
     def _stop_frpc(self) -> None:
         self.manager.stop_frpc()
@@ -206,7 +214,7 @@ class TunnelTab(QWidget):
         host = self.server_addr.text().strip()
         port = self.remote_port.value()
         if not host:
-            QMessageBox.warning(self, "Туннель", "Укажите FRP server address.")
+            QMessageBox.warning(self, "frpc", "Укажите адрес VPS / frps.")
             return
 
         self._append_log(f"Проверка внешнего порта {host}:{port}...")
@@ -223,7 +231,7 @@ class TunnelTab(QWidget):
     def _on_port_check_finished(self, host: str, port: int, is_open: bool) -> None:
         status = "открыт" if is_open else "не отвечает"
         self._append_log(f"Внешний порт {host}:{port} {status}.")
-        QMessageBox.information(self, "Туннель", f"{host}:{port} {status}.")
+        QMessageBox.information(self, "frpc", f"{host}:{port} {status}.")
 
     def _on_status_changed(self, status: str) -> None:
         self._append_log(f"Статус frpc: {status}")
@@ -233,4 +241,16 @@ class TunnelTab(QWidget):
 
     def _show_error(self, message: str) -> None:
         self._append_log(message)
-        QMessageBox.warning(self, "Туннель", message)
+        QMessageBox.warning(self, "frpc", message)
+
+    def _open_frpc_folder(self) -> None:
+        path = Path(self.frpc_folder.text() or self._profile_frpc_dir(self.profile_name.text()))
+        path.mkdir(parents=True, exist_ok=True)
+        self.frpc_folder.setText(str(path))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+
+    def _profile_frpc_dir(self, profile_name: str) -> Path:
+        return self.context.data_dir / "frp" / "profiles" / (profile_name.strip() or "default")
+
+
+TunnelTab = FrpcTab

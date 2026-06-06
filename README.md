@@ -52,16 +52,12 @@ Stage 5 is implemented:
 - ufw/firewalld port opening without disabling the firewall;
 - full remote frps installation flow for Linux amd64 VPS hosts.
 
-Stage 6 is implemented:
+Stage 6 is implemented as separate manual workflow tabs:
 
-- Quick Start profile validation;
-- Java and local Minecraft port checks;
-- VPS SSH/frps readiness check;
-- local Minecraft launch;
-- local port polling before tunnel startup;
-- frpc.toml generation and local frpc launch;
-- friend address display as VPS_IP:REMOTE_PORT;
-- stop-all action for local Minecraft/frpc and remote frps when available.
+- VPS tab manages SSH, remote frps install/config/systemd/firewall;
+- Minecraft tab manages the local server folder, server.properties, EULA, and Java process;
+- frpc tab manages the local frpc working folder, frpc.toml, binary download, launch, logs, and external port checks;
+- the old all-in-one Quick Start tab has been removed to keep each action explicit.
 
 Stage 7 is implemented:
 
@@ -73,7 +69,7 @@ Stage 7 is implemented:
 
 Stage 8 is implemented:
 
-- status badges are used in quick start and diagnostics;
+- status badges are used in runtime and diagnostics views;
 - window geometry/state are saved and restored;
 - theme and close behavior are persisted through QSettings;
 - dark/light/system theme switching is available;

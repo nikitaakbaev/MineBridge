@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from minebridge_frp.app.core.app_context import AppContext
+from minebridge_frp.app.ui.theme import apply_theme
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 
 
@@ -87,12 +88,4 @@ class SettingsTab(QWidget):
         app = QApplication.instance()
         if app is None:
             return
-        if theme == "dark":
-            app.setStyleSheet(
-                "QWidget { background: #111827; color: #f9fafb; }"
-                "QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {"
-                " background: #1f2937; color: #f9fafb; border: 1px solid #374151; }"
-                "QPushButton { background: #374151; color: #f9fafb; padding: 6px 10px; }"
-            )
-        else:
-            app.setStyleSheet("")
+        apply_theme(app, theme)

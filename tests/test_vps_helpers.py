@@ -78,3 +78,15 @@ def test_vps_commands_auto_connect_before_exec():
     assert result.stdout == "ok"
     assert manager.connect_count == 1
     assert manager.fake_client.commands == ["systemctl restart minebridge-frps"]
+
+
+def test_vps_remote_download_install_uses_github_asset_on_server():
+    manager = _AutoConnectVpsManager()
+
+    manager._install_linux_frps_binary_remote_download()
+
+    command = manager.fake_client.commands[0]
+    assert "api.github.com/repos/fatedier/frp/releases/latest" in command
+    assert "grep linux_amd64" in command
+    assert "curl -fL" in command
+    assert 'install -m 0755 "$frps_path" "$remote_dir/frps"' in command

@@ -1,0 +1,2 @@
+"""Diagnostics service placeholder."""
+

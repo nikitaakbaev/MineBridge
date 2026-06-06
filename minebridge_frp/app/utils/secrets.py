@@ -1,0 +1,2 @@
+"""Secret generation placeholder."""
+

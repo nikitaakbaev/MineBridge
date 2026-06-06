@@ -1,0 +1,2 @@
+"""FRP management service placeholder."""
+

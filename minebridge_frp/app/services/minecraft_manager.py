@@ -1,0 +1,2 @@
+"""Minecraft management service placeholder."""
+

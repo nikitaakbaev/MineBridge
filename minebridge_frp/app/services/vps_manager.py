@@ -1,0 +1,2 @@
+"""VPS management service placeholder."""
+

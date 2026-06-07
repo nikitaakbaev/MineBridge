@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (  # noqa: E402
     QScrollArea,
     QSplitter,
     QTabWidget,
+    QToolButton,
 )
 
 from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
@@ -170,9 +171,14 @@ def test_runtime_tabs_expose_profile_edit_buttons(tmp_path):
     window = MainWindow(context)
 
     for tab in (window.vps_tab, window.minecraft_tab, window.frpc_tab):
-        assert tab.new_profile_button.text() == "Новый профиль"
-        assert tab.rename_profile_button.text() == "Переименовать"
-        assert tab.delete_profile_button.text() == "Удалить"
+        tool_button = tab.findChild(QToolButton)
+        assert tool_button is not None
+        assert tool_button.text() == "Действия"
+        assert [action.text() for action in tool_button.menu().actions() if action.text()] == [
+            "Новый профиль",
+            "Переименовать",
+            "Удалить",
+        ]
 
 
 def test_logs_tab_loads_and_filters_app_log(tmp_path):

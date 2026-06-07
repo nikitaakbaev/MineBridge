@@ -24,7 +24,12 @@ from minebridge_frp.app.models.vps import VpsConfig
 from minebridge_frp.app.services.password_vault import PasswordVault
 from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.services.vps_manager import VpsManager
-from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button, scroll_panel
+from minebridge_frp.app.ui.layouts import (
+    FlowLayout,
+    prepare_action_button,
+    profile_selector_panel,
+    scroll_panel,
+)
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 from minebridge_frp.app.ui.workers import run_in_thread
@@ -46,9 +51,6 @@ class VpsTab(QWidget):
 
         self.profile_select = QComboBox()
         self.profile_select.setMinimumWidth(260)
-        self.new_profile_button = QPushButton("Новый профиль")
-        self.rename_profile_button = QPushButton("Переименовать")
-        self.delete_profile_button = QPushButton("Удалить")
 
         self.host = QLineEdit()
         self.ssh_port = QSpinBox()
@@ -75,16 +77,14 @@ class VpsTab(QWidget):
 
         profile_group = QGroupBox("Профиль")
         profile_layout = QVBoxLayout(profile_group)
-        profile_layout.addWidget(self.profile_select, 1)
-        profile_actions = QWidget()
-        profile_actions_layout = FlowLayout(profile_actions, margin=0, spacing=8)
-        for button in (
-            self.new_profile_button,
-            self.rename_profile_button,
-            self.delete_profile_button,
-        ):
-            profile_actions_layout.addWidget(prepare_action_button(button))
-        profile_layout.addWidget(profile_actions)
+        profile_layout.addWidget(
+            profile_selector_panel(
+                self.profile_select,
+                self._create_profile,
+                self._rename_profile,
+                self._delete_profile,
+            )
+        )
 
         settings_group = QGroupBox("Подключение и frps")
         form = QFormLayout(settings_group)
@@ -339,9 +339,6 @@ class VpsTab(QWidget):
 
     def _connect_autosave(self) -> None:
         self.profile_select.currentIndexChanged.connect(self._profile_selected)
-        self.new_profile_button.clicked.connect(self._create_profile)
-        self.rename_profile_button.clicked.connect(self._rename_profile)
-        self.delete_profile_button.clicked.connect(self._delete_profile)
         self.host.editingFinished.connect(self._autosave)
         self.username.editingFinished.connect(self._autosave)
         self.auth_type.currentTextChanged.connect(self._autosave)

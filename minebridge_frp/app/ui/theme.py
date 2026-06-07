@@ -187,13 +187,13 @@ QSpinBox::down-arrow {
     width: 10px;
     height: 10px;
 }
-QPushButton {
+QPushButton, QToolButton {
     border: 1px solid #3a4a5f;
     border-radius: 5px;
     padding: 8px 11px;
-    min-height: 30px;
+    min-height: 34px;
 }
-QPushButton:hover {
+QPushButton:hover, QToolButton:hover {
     border-color: #60a5fa;
 }
 QPushButton:disabled {
@@ -228,6 +228,20 @@ QStatusBar {
     background: #111923;
     color: #aebacc;
     border-top: 1px solid #263443;
+}
+QMenu {
+    background: #172231;
+    color: #edf2f7;
+    border: 1px solid #324257;
+    border-radius: 5px;
+    padding: 5px;
+}
+QMenu::item {
+    padding: 7px 22px;
+    border-radius: 4px;
+}
+QMenu::item:selected {
+    background: #263548;
 }
 """
 
@@ -271,11 +285,11 @@ QLabel, QCheckBox, QRadioButton {
 QGroupBox QLabel, QGroupBox QCheckBox, QGroupBox QRadioButton {
     background: transparent;
 }
-QPushButton {
+QPushButton, QToolButton {
     background: #263548;
     color: #f8fafc;
 }
-QPushButton:pressed {
+QPushButton:pressed, QToolButton:pressed {
     background: #1d2a3a;
 }
 """

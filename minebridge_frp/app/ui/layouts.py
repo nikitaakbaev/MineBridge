@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLayout,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QToolButton,
     QWidget,
 )
 
@@ -117,5 +120,38 @@ def scroll_panel(widget: QWidget) -> QScrollArea:
 
 def prepare_action_button(button: QPushButton) -> QPushButton:
     button.setMinimumWidth(180)
+    button.setMinimumHeight(40)
     button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     return button
+
+
+def profile_selector_panel(
+    profile_select: QWidget,
+    new_callback,
+    rename_callback,
+    delete_callback,
+) -> QWidget:
+    """Create a compact profile selector with actions hidden in a menu."""
+    panel = QWidget()
+    layout = QHBoxLayout(panel)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(8)
+
+    menu = QMenu(panel)
+    menu.addAction("Новый профиль", new_callback)
+    menu.addAction("Переименовать", rename_callback)
+    menu.addSeparator()
+    menu.addAction("Удалить", delete_callback)
+
+    action_button = QToolButton(panel)
+    action_button.setText("Действия")
+    action_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+    action_button.setMenu(menu)
+    action_button.setMinimumWidth(118)
+    action_button.setMinimumHeight(40)
+    action_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+    profile_select.setMinimumHeight(40)
+    layout.addWidget(profile_select, 1)
+    layout.addWidget(action_button)
+    return panel

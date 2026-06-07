@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+from minebridge_frp.app.core.exceptions import ConfigurationError
 from minebridge_frp.app.services.profile_service import ProfileService
 
 
@@ -54,3 +57,25 @@ def test_profile_service_keeps_section_profiles_independent(tmp_path):
     assert active.vps == service.get_active_vps_profile().config
     assert active.minecraft == service.get_active_minecraft_profile().config
     assert active.tunnel == service.get_active_tunnel_profile().config
+
+
+def test_profile_service_renames_and_deletes_section_profiles(tmp_path):
+    service = ProfileService(tmp_path / "profiles.sqlite3")
+    vps = service.create_vps_profile("Old VPS")
+
+    renamed = service.rename_vps_profile(vps.profile.id, "New VPS")
+    assert renamed.profile.name == "New VPS"
+
+    service.set_active_vps_profile(vps.profile.id)
+    fallback = service.delete_vps_profile(vps.profile.id)
+
+    assert fallback.profile.name == "Профиль по умолчанию"
+    assert service.get_active_vps_profile().profile.name == "Профиль по умолчанию"
+
+
+def test_profile_service_rejects_deleting_last_section_profile(tmp_path):
+    service = ProfileService(tmp_path / "profiles.sqlite3")
+    only = service.get_active_tunnel_profile()
+
+    with pytest.raises(ConfigurationError, match="последний"):
+        service.delete_tunnel_profile(only.profile.id)

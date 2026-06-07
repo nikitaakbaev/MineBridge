@@ -138,6 +138,23 @@ class ProfileService:
     def save_vps_profile(self, bundle: VpsProfileBundle) -> VpsProfileBundle:
         return self.repository.save_vps_profile(bundle)
 
+    def rename_vps_profile(self, profile_id: int, name: str) -> VpsProfileBundle:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ConfigurationError("Название VPS-профиля не может быть пустым")
+        bundle = self.repository.rename_vps_profile(profile_id, clean_name)
+        if bundle is None:
+            raise ConfigurationError(f"VPS-профиль с id={profile_id} не найден")
+        return bundle
+
+    def delete_vps_profile(self, profile_id: int) -> VpsProfileBundle:
+        if len(self.list_vps_profiles()) <= 1:
+            raise ConfigurationError("Нельзя удалить последний VPS-профиль")
+        bundle = self.repository.delete_vps_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"VPS-профиль с id={profile_id} не найден")
+        return bundle
+
     def list_minecraft_profiles(self) -> list[Profile]:
         return self.repository.list_minecraft_profiles()
 
@@ -169,6 +186,23 @@ class ProfileService:
     ) -> MinecraftProfileBundle:
         return self.repository.save_minecraft_profile(bundle)
 
+    def rename_minecraft_profile(self, profile_id: int, name: str) -> MinecraftProfileBundle:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ConfigurationError("Название Minecraft-профиля не может быть пустым")
+        bundle = self.repository.rename_minecraft_profile(profile_id, clean_name)
+        if bundle is None:
+            raise ConfigurationError(f"Minecraft-профиль с id={profile_id} не найден")
+        return bundle
+
+    def delete_minecraft_profile(self, profile_id: int) -> MinecraftProfileBundle:
+        if len(self.list_minecraft_profiles()) <= 1:
+            raise ConfigurationError("Нельзя удалить последний Minecraft-профиль")
+        bundle = self.repository.delete_minecraft_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"Minecraft-профиль с id={profile_id} не найден")
+        return bundle
+
     def list_tunnel_profiles(self) -> list[Profile]:
         return self.repository.list_tunnel_profiles()
 
@@ -196,6 +230,23 @@ class ProfileService:
 
     def save_tunnel_profile(self, bundle: TunnelProfileBundle) -> TunnelProfileBundle:
         return self.repository.save_tunnel_profile(bundle)
+
+    def rename_tunnel_profile(self, profile_id: int, name: str) -> TunnelProfileBundle:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ConfigurationError("Название frpc-профиля не может быть пустым")
+        bundle = self.repository.rename_tunnel_profile(profile_id, clean_name)
+        if bundle is None:
+            raise ConfigurationError(f"frpc-профиль с id={profile_id} не найден")
+        return bundle
+
+    def delete_tunnel_profile(self, profile_id: int) -> TunnelProfileBundle:
+        if len(self.list_tunnel_profiles()) <= 1:
+            raise ConfigurationError("Нельзя удалить последний frpc-профиль")
+        bundle = self.repository.delete_tunnel_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"frpc-профиль с id={profile_id} не найден")
+        return bundle
 
     def export_profile(self, profile_id: int, path: Path) -> Path:
         bundle = self.get_profile(profile_id)

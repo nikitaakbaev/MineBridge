@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from minebridge_frp.app.db.database import (
@@ -177,6 +177,14 @@ class ProfileRepository:
             session.refresh(record)
             return self._vps_profile_from_record(record)
 
+    def rename_vps_profile(self, profile_id: int, name: str) -> VpsProfileBundle | None:
+        record = self._rename_section_profile(VpsProfileRecord, profile_id, name)
+        return self._vps_profile_from_record(record) if record else None
+
+    def delete_vps_profile(self, profile_id: int) -> VpsProfileBundle | None:
+        record = self._delete_section_profile(VpsProfileRecord, profile_id)
+        return self._vps_profile_from_record(record) if record else None
+
     def list_minecraft_profiles(self) -> list[Profile]:
         return self._list_section_profiles(MinecraftProfileRecord)
 
@@ -237,6 +245,18 @@ class ProfileRepository:
             session.refresh(record)
             return self._minecraft_profile_from_record(record)
 
+    def rename_minecraft_profile(
+        self,
+        profile_id: int,
+        name: str,
+    ) -> MinecraftProfileBundle | None:
+        record = self._rename_section_profile(MinecraftProfileRecord, profile_id, name)
+        return self._minecraft_profile_from_record(record) if record else None
+
+    def delete_minecraft_profile(self, profile_id: int) -> MinecraftProfileBundle | None:
+        record = self._delete_section_profile(MinecraftProfileRecord, profile_id)
+        return self._minecraft_profile_from_record(record) if record else None
+
     def list_tunnel_profiles(self) -> list[Profile]:
         return self._list_section_profiles(TunnelProfileRecord)
 
@@ -295,6 +315,14 @@ class ProfileRepository:
             session.refresh(record)
             return self._tunnel_profile_from_record(record)
 
+    def rename_tunnel_profile(self, profile_id: int, name: str) -> TunnelProfileBundle | None:
+        record = self._rename_section_profile(TunnelProfileRecord, profile_id, name)
+        return self._tunnel_profile_from_record(record) if record else None
+
+    def delete_tunnel_profile(self, profile_id: int) -> TunnelProfileBundle | None:
+        record = self._delete_section_profile(TunnelProfileRecord, profile_id)
+        return self._tunnel_profile_from_record(record) if record else None
+
     def _clear_default(self, session: Session) -> None:
         session.execute(update(ProfileRecord).values(is_default=False))
 
@@ -307,6 +335,38 @@ class ProfileRepository:
                 select(record_type).order_by(record_type.is_default.desc(), record_type.name)
             ).all()
             return [Profile.model_validate(record) for record in records]
+
+    def _rename_section_profile(self, record_type: type, profile_id: int, name: str):
+        with self.session_factory() as session:
+            record = session.get(record_type, profile_id)
+            if record is None:
+                return None
+            record.name = name
+            session.commit()
+            session.refresh(record)
+            return record
+
+    def _delete_section_profile(self, record_type: type, profile_id: int):
+        with self.session_factory() as session:
+            record = session.get(record_type, profile_id)
+            total = session.scalar(select(func.count()).select_from(record_type))
+            if record is None or total is None or total <= 1:
+                return None
+
+            was_default = record.is_default
+            session.delete(record)
+            session.flush()
+
+            if was_default:
+                replacement = session.scalars(
+                    select(record_type).order_by(record_type.name)
+                ).first()
+                if replacement is not None:
+                    replacement.is_default = True
+
+            session.commit()
+            default = session.scalar(select(record_type).where(record_type.is_default.is_(True)))
+            return default
 
     def _bundle_from_record(self, record: ProfileRecord) -> ProfileBundle:
         return ProfileBundle(

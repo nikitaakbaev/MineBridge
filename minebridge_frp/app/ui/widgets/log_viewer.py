@@ -21,6 +21,8 @@ class LogViewer(QWidget):
         self.text.setPlaceholderText("Логи появятся здесь.")
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
         layout.addWidget(QLabel(title))
         layout.addWidget(self.text)
 

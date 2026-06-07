@@ -158,6 +158,23 @@ def test_vps_and_minecraft_tabs_can_switch_profiles(tmp_path):
     assert minecraft_tab.profile_select.currentText() == "Paper test"
 
 
+def test_runtime_tabs_expose_profile_edit_buttons(tmp_path):
+    _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    window = MainWindow(context)
+
+    for tab in (window.vps_tab, window.minecraft_tab, window.frpc_tab):
+        assert tab.new_profile_button.text() == "Новый профиль"
+        assert tab.rename_profile_button.text() == "Переименовать"
+        assert tab.delete_profile_button.text() == "Удалить"
+
+
 def test_logs_tab_loads_and_filters_app_log(tmp_path):
     _app()
     log_dir = tmp_path / "logs"

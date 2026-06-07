@@ -51,7 +51,9 @@ class FlowLayout(QLayout):
         self._do_layout(rect, test_only=False)
 
     def sizeHint(self) -> QSize:  # noqa: N802 - Qt override name.
-        return self.minimumSize()
+        parent = self.parentWidget()
+        width = parent.width() if parent and parent.width() > 0 else self._single_row_width()
+        return QSize(self.minimumSize().width(), self.heightForWidth(width))
 
     def minimumSize(self) -> QSize:  # noqa: N802 - Qt override name.
         size = QSize()
@@ -60,6 +62,14 @@ class FlowLayout(QLayout):
         margins = self.contentsMargins()
         size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
         return size
+
+    def _single_row_width(self) -> int:
+        margins = self.contentsMargins()
+        if not self._items:
+            return margins.left() + margins.right()
+        width = sum(item.sizeHint().width() for item in self._items)
+        width += self.spacing() * max(0, len(self._items) - 1)
+        return width + margins.left() + margins.right()
 
     def _do_layout(self, rect: QRect, *, test_only: bool) -> int:
         margins = self.contentsMargins()

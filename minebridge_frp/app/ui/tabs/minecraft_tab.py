@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QInputDialog,
     QLineEdit,
     QMessageBox,
@@ -49,6 +48,8 @@ class MinecraftTab(QWidget):
         self.profile_select = QComboBox()
         self.profile_select.setMinimumWidth(260)
         self.new_profile_button = QPushButton("Новый профиль")
+        self.rename_profile_button = QPushButton("Переименовать")
+        self.delete_profile_button = QPushButton("Удалить")
 
         self.server_dir = PathPicker(file_mode=False)
         self.jar_path = PathPicker(file_mode=True)
@@ -86,9 +87,17 @@ class MinecraftTab(QWidget):
         self.motd = QLineEdit("MineBridge FRP server")
 
         profile_group = QGroupBox("Профиль")
-        profile_layout = QHBoxLayout(profile_group)
+        profile_layout = QVBoxLayout(profile_group)
         profile_layout.addWidget(self.profile_select, 1)
-        profile_layout.addWidget(self.new_profile_button)
+        profile_actions = QWidget()
+        profile_actions_layout = FlowLayout(profile_actions, margin=0, spacing=8)
+        for button in (
+            self.new_profile_button,
+            self.rename_profile_button,
+            self.delete_profile_button,
+        ):
+            profile_actions_layout.addWidget(prepare_action_button(button))
+        profile_layout.addWidget(profile_actions)
 
         settings_group = QGroupBox("Сервер и запуск")
         form = QFormLayout(settings_group)
@@ -166,6 +175,8 @@ class MinecraftTab(QWidget):
         self.reload_active_profile()
         self.profile_select.currentIndexChanged.connect(self._profile_selected)
         self.new_profile_button.clicked.connect(self._create_profile)
+        self.rename_profile_button.clicked.connect(self._rename_profile)
+        self.delete_profile_button.clicked.connect(self._delete_profile)
 
     def reload_active_profile(self) -> None:
         self._profile_loading = True
@@ -215,6 +226,45 @@ class MinecraftTab(QWidget):
             return
         self.reload_active_profile()
         self._append_log(f"Создан профиль: {bundle.profile.name}")
+        self.profile_changed.emit()
+
+    def _rename_profile(self) -> None:
+        profile_id = self.profile_select.currentData()
+        if profile_id is None:
+            return
+        name, accepted = QInputDialog.getText(
+            self,
+            "Переименовать профиль",
+            "Новое название:",
+            text=self.profile_select.currentText(),
+        )
+        if not accepted:
+            return
+        try:
+            self.profile_service.rename_minecraft_profile(int(profile_id), name)
+        except ConfigurationError as exc:
+            QMessageBox.warning(self, "Minecraft", str(exc))
+            return
+        self.reload_active_profile()
+        self.profile_changed.emit()
+
+    def _delete_profile(self) -> None:
+        profile_id = self.profile_select.currentData()
+        if profile_id is None:
+            return
+        answer = QMessageBox.question(
+            self,
+            "Удалить профиль",
+            f"Удалить Minecraft-профиль «{self.profile_select.currentText()}»?",
+        )
+        if answer != QMessageBox.Yes:
+            return
+        try:
+            self.profile_service.delete_minecraft_profile(int(profile_id))
+        except ConfigurationError as exc:
+            QMessageBox.warning(self, "Minecraft", str(exc))
+            return
+        self.reload_active_profile()
         self.profile_changed.emit()
 
     def _load_active_profile(self) -> None:

@@ -20,6 +20,7 @@ Stage 2 is implemented:
 - automatic default profile creation;
 - profile listing and active profile selection;
 - independent VPS, Minecraft, and frpc profile lists for mixing saved configurations;
+- profile presets can be created, renamed, deleted, and selected per workflow tab;
 - profile JSON import/export from the Quick Start tab.
 
 Stage 3 is implemented:

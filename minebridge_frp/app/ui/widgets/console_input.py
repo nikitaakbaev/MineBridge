@@ -23,6 +23,7 @@ class ConsoleInput(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
         layout.addWidget(self.input)
         layout.addWidget(self.button)
 

@@ -14,6 +14,9 @@ COMMON_STYLESHEET = """
 QWidget {
     font-size: 13px;
 }
+QLabel, QCheckBox, QRadioButton {
+    background: transparent;
+}
 QMainWindow, QDialog {
     background: #111923;
 }
@@ -86,6 +89,7 @@ QGroupBox::title {
     left: 10px;
     padding: 0 6px;
     color: #d7e1ec;
+    background: #172231;
 }
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
     border: 1px solid #324257;
@@ -96,6 +100,9 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
 QLineEdit, QSpinBox, QComboBox {
     min-height: 28px;
     max-height: 42px;
+}
+QSpinBox {
+    padding-right: 25px;
 }
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus {
     border-color: #60a5fa;
@@ -108,11 +115,67 @@ QCheckBox {
     max-height: 42px;
     spacing: 8px;
 }
+QCheckBox::indicator {
+    width: 15px;
+    height: 15px;
+    border: 1px solid #324257;
+    border-radius: 3px;
+    background: #0d1420;
+}
+QCheckBox::indicator:hover {
+    border-color: #60a5fa;
+}
+QCheckBox::indicator:checked {
+    background: #3b82f6;
+    border-color: #60a5fa;
+}
 QComboBox::drop-down {
     width: 28px;
+    border-left: 1px solid #324257;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background: #132033;
+}
+QComboBox::down-arrow {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #d7e1ec;
 }
 QSpinBox::up-button, QSpinBox::down-button {
-    width: 22px;
+    subcontrol-origin: border;
+    width: 23px;
+    border-left: 1px solid #324257;
+    background: #132033;
+}
+QSpinBox::up-button {
+    subcontrol-position: top right;
+    border-top-right-radius: 5px;
+    border-bottom: 1px solid #324257;
+    margin: 1px 1px 0 0;
+}
+QSpinBox::down-button {
+    subcontrol-position: bottom right;
+    border-bottom-right-radius: 5px;
+    margin: 0 1px 1px 0;
+}
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background: #1b2b41;
+}
+QSpinBox::up-arrow {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid #d7e1ec;
+}
+QSpinBox::down-arrow {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #d7e1ec;
 }
 QPushButton {
     border: 1px solid #3a4a5f;

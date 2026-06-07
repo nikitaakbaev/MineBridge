@@ -7,6 +7,11 @@ from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = Path(SPECPATH).parent
 
+icon_datas = [
+    (str(path), "resources/icons")
+    for path in (ROOT / "resources" / "icons").glob("*.svg")
+]
+
 hiddenimports = (
     collect_submodules("pydantic")
     + collect_submodules("sqlalchemy.dialects.sqlite")
@@ -17,7 +22,7 @@ a = Analysis(
     [str(ROOT / "minebridge_frp" / "app" / "main.py")],
     pathex=[str(ROOT)],
     binaries=[],
-    datas=[(str(ROOT / "resources" / "icons" / "minebridge-frp.svg"), "resources/icons")],
+    datas=icon_datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

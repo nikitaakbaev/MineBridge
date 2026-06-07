@@ -51,9 +51,12 @@ class MainWindow(QMainWindow):
         tabs.setDocumentMode(True)
         tabs.setMovable(False)
         tabs.setUsesScrollButtons(True)
+        self.vps_tab = VpsTab(context, self.profile_service)
         self.minecraft_tab = MinecraftTab(self.profile_service)
         self.frpc_tab = FrpcTab(context, self.profile_service)
-        tabs.addTab(VpsTab(context, self.profile_service), "VPS")
+        self.vps_tab.profile_changed.connect(self._reload_profile_tabs)
+        self.minecraft_tab.profile_changed.connect(self._reload_profile_tabs)
+        tabs.addTab(self.vps_tab, "VPS")
         tabs.addTab(self.minecraft_tab, "Minecraft")
         tabs.addTab(self.frpc_tab, "frpc")
         tabs.addTab(DiagnosticsTab(context, self.profile_service), "Диагностика")
@@ -62,6 +65,11 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(tabs)
         self.statusBar().showMessage("MineBridge FRP готов к настройке профиля")
+
+    def _reload_profile_tabs(self) -> None:
+        self.vps_tab.reload_active_profile()
+        self.minecraft_tab.reload_active_profile()
+        self.frpc_tab.reload_active_profile()
 
     def closeEvent(self, event) -> None:  # noqa: N802 - Qt override name.
         behavior = self.settings.value("close_behavior", "спросить")

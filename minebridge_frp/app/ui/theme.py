@@ -4,10 +4,26 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication
 
+from minebridge_frp.app.ui.icons import resource_icon_path
+
 
 def apply_theme(app: QApplication) -> None:
     """Apply the permanent MineBridge dark theme."""
-    app.setStyleSheet(DARK_STYLESHEET)
+    app.setStyleSheet(_build_dark_stylesheet())
+
+
+def _icon_url(name: str) -> str:
+    path = resource_icon_path(name)
+    if path is None:
+        return ""
+    return str(path).replace("\\", "/")
+
+
+def _build_dark_stylesheet() -> str:
+    return (
+        DARK_STYLESHEET.replace("{arrow_down}", _icon_url("control-arrow-down.svg"))
+        .replace("{arrow_up}", _icon_url("control-arrow-up.svg"))
+    )
 
 
 COMMON_STYLESHEET = """
@@ -125,6 +141,51 @@ QCheckBox::indicator:hover {
 QCheckBox::indicator:checked {
     background: #3b82f6;
     border-color: #60a5fa;
+}
+QComboBox::drop-down {
+    width: 28px;
+    border-left: 1px solid #324257;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background: #132033;
+}
+QComboBox::down-arrow {
+    image: url("{arrow_down}");
+    width: 12px;
+    height: 12px;
+}
+QSpinBox {
+    padding-right: 25px;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+    subcontrol-origin: border;
+    width: 23px;
+    border-left: 1px solid #324257;
+    background: #132033;
+}
+QSpinBox::up-button {
+    subcontrol-position: top right;
+    border-top-right-radius: 5px;
+    border-bottom: 1px solid #324257;
+    margin: 1px 1px 0 0;
+}
+QSpinBox::down-button {
+    subcontrol-position: bottom right;
+    border-bottom-right-radius: 5px;
+    margin: 0 1px 1px 0;
+}
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background: #1b2b41;
+}
+QSpinBox::up-arrow {
+    image: url("{arrow_up}");
+    width: 10px;
+    height: 10px;
+}
+QSpinBox::down-arrow {
+    image: url("{arrow_down}");
+    width: 10px;
+    height: 10px;
 }
 QPushButton {
     border: 1px solid #3a4a5f;

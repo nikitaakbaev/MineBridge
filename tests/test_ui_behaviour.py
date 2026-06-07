@@ -20,8 +20,10 @@ from minebridge_frp.app.core.single_instance import SingleInstanceGuard  # noqa:
 from minebridge_frp.app.services.profile_service import ProfileService  # noqa: E402
 from minebridge_frp.app.ui.main_window import MainWindow  # noqa: E402
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab  # noqa: E402
+from minebridge_frp.app.ui.tabs.minecraft_tab import MinecraftTab  # noqa: E402
 from minebridge_frp.app.ui.tabs.settings_tab import SettingsTab  # noqa: E402
 from minebridge_frp.app.ui.tabs.vps_tab import VpsTab  # noqa: E402
+from minebridge_frp.app.ui.theme import apply_theme  # noqa: E402
 from minebridge_frp.app.ui.widgets.log_viewer import clean_log_line  # noqa: E402
 from minebridge_frp.app.ui.workers import run_in_thread  # noqa: E402
 
@@ -123,6 +125,32 @@ def test_vps_tab_shows_only_selected_auth_fields(tmp_path):
     assert form.labelForField(tab.password).isHidden()
     assert not tab.private_key_path.isHidden()
     assert not form.labelForField(tab.private_key_path).isHidden()
+
+
+def test_vps_and_minecraft_tabs_can_switch_profiles(tmp_path):
+    _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    profile_service = ProfileService.from_context(context)
+    profile_service.create_profile("Paper test")
+    vps_tab = VpsTab(context, profile_service)
+    minecraft_tab = MinecraftTab(profile_service)
+
+    assert vps_tab.profile_select.count() == 2
+    assert minecraft_tab.profile_select.count() == 2
+
+    target_index = vps_tab.profile_select.findText("Paper test")
+    assert target_index >= 0
+    vps_tab.profile_select.setCurrentIndex(target_index)
+    minecraft_tab.reload_active_profile()
+
+    assert profile_service.get_active_profile().profile.name == "Paper test"
+    assert minecraft_tab.profile_select.currentText() == "Paper test"
 
 
 def test_logs_tab_loads_and_filters_app_log(tmp_path):
@@ -227,6 +255,18 @@ def test_settings_tab_does_not_expose_theme_switching(tmp_path):
     tab = SettingsTab(context)
 
     assert not hasattr(tab, "theme")
+
+
+def test_dark_theme_uses_visible_control_arrows():
+    app = _app()
+    apply_theme(app)
+
+    style = app.styleSheet()
+
+    assert "control-arrow-up.svg" in style
+    assert "control-arrow-down.svg" in style
+    assert "QSpinBox::up-arrow" in style
+    assert "QComboBox::down-arrow" in style
 
 
 def test_single_instance_guard_rejects_second_instance():

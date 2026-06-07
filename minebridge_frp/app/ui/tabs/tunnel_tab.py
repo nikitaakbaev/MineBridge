@@ -129,6 +129,9 @@ class FrpcTab(QWidget):
 
         self._load_active_profile()
 
+    def reload_active_profile(self) -> None:
+        self._load_active_profile()
+
     def _load_active_profile(self) -> None:
         bundle = self.profile_service.get_active_profile()
         config = bundle.tunnel

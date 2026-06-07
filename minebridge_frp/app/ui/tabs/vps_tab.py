@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -32,6 +34,8 @@ from minebridge_frp.app.ui.workers import run_in_thread
 class VpsTab(QWidget):
     """VPS SSH and remote FRP controls."""
 
+    profile_changed = Signal()
+
     def __init__(self, context: AppContext, profile_service: ProfileService) -> None:
         super().__init__()
         self.context = context
@@ -39,6 +43,11 @@ class VpsTab(QWidget):
         self.password_vault = PasswordVault(context.config_dir)
         self._threads = []
         self._autosave_enabled = False
+        self._profile_loading = False
+
+        self.profile_select = QComboBox()
+        self.profile_select.setMinimumWidth(260)
+        self.new_profile_button = QPushButton("Новый профиль")
 
         self.host = QLineEdit()
         self.ssh_port = QSpinBox()
@@ -62,6 +71,11 @@ class VpsTab(QWidget):
         self.private_key_path = PathPicker(file_mode=True)
         self.install_dir = QLineEdit("/opt/minebridge-frp")
         self.dashboard_enabled = QCheckBox()
+
+        profile_group = QGroupBox("Профиль")
+        profile_layout = QHBoxLayout(profile_group)
+        profile_layout.addWidget(self.profile_select, 1)
+        profile_layout.addWidget(self.new_profile_button)
 
         settings_group = QGroupBox("Подключение и frps")
         form = QFormLayout(settings_group)
@@ -107,6 +121,7 @@ class VpsTab(QWidget):
         controls_layout = QVBoxLayout(controls)
         controls_layout.setContentsMargins(8, 8, 8, 8)
         controls_layout.setSpacing(10)
+        controls_layout.addWidget(profile_group)
         controls_layout.addWidget(settings_group)
         controls_layout.addWidget(actions)
         controls_layout.addStretch(1)
@@ -123,10 +138,32 @@ class VpsTab(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(splitter)
 
-        self._load_active_profile()
+        self.reload_active_profile()
         self._update_auth_fields()
         self._connect_autosave()
         self._autosave_enabled = True
+
+    def reload_active_profile(self) -> None:
+        was_autosave_enabled = self._autosave_enabled
+        self._autosave_enabled = False
+        self._profile_loading = True
+        try:
+            self._load_profile_options()
+            self._load_active_profile()
+            self._update_auth_fields()
+        finally:
+            self._profile_loading = False
+            self._autosave_enabled = was_autosave_enabled
+
+    def _load_profile_options(self) -> None:
+        active_id = self.profile_service.get_active_profile().profile.id
+        self.profile_select.blockSignals(True)
+        self.profile_select.clear()
+        for profile in self.profile_service.list_profiles():
+            self.profile_select.addItem(profile.name, profile.id)
+            if profile.id == active_id:
+                self.profile_select.setCurrentIndex(self.profile_select.count() - 1)
+        self.profile_select.blockSignals(False)
 
     def _load_active_profile(self) -> None:
         config = self.profile_service.get_active_profile().vps
@@ -296,6 +333,8 @@ class VpsTab(QWidget):
         QMessageBox.information(self, "VPS", "Настройки VPS сохранены.")
 
     def _connect_autosave(self) -> None:
+        self.profile_select.currentIndexChanged.connect(self._profile_selected)
+        self.new_profile_button.clicked.connect(self._create_profile)
         self.host.editingFinished.connect(self._autosave)
         self.username.editingFinished.connect(self._autosave)
         self.auth_type.currentTextChanged.connect(self._autosave)
@@ -307,6 +346,39 @@ class VpsTab(QWidget):
         self.bind_port.valueChanged.connect(self._autosave)
         self.dashboard_enabled.toggled.connect(self._autosave)
         self.dashboard_port.valueChanged.connect(self._autosave)
+
+    def _profile_selected(self, *_args: object) -> None:
+        if self._profile_loading:
+            return
+        profile_id = self.profile_select.currentData()
+        if profile_id is None:
+            return
+        try:
+            self._save_profile_config()
+            self.profile_service.set_active_profile(int(profile_id))
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            self.reload_active_profile()
+            return
+        self.reload_active_profile()
+        self._show_status(f"Профиль выбран: {self.profile_select.currentText()}")
+        self.profile_changed.emit()
+
+    def _create_profile(self) -> None:
+        name, accepted = QInputDialog.getText(self, "Новый профиль", "Название профиля:")
+        if not accepted:
+            return
+        try:
+            bundle = self.profile_service.create_profile(name)
+            if bundle.profile.id is None:
+                raise ConfigurationError("Не удалось получить id нового профиля.")
+            self.profile_service.set_active_profile(bundle.profile.id)
+        except (ConfigurationError, ValueError) as exc:
+            self._on_action_failed(str(exc))
+            return
+        self.reload_active_profile()
+        self._show_status(f"Создан профиль: {bundle.profile.name}")
+        self.profile_changed.emit()
 
     def _autosave(self, *_args: object) -> None:
         if not self._autosave_enabled:

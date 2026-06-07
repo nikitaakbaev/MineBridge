@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QTimer
+from PySide6.QtCore import QProcess, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -33,13 +35,20 @@ from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 class MinecraftTab(QWidget):
     """Local Minecraft server controls."""
 
+    profile_changed = Signal()
+
     def __init__(self, profile_service: ProfileService) -> None:
         super().__init__()
         self.profile_service = profile_service
         self.manager = MinecraftManager()
+        self._profile_loading = False
         self.manager.log_line.connect(self._append_log)
         self.manager.status_changed.connect(self._on_status_changed)
         self.manager.error.connect(self._show_error)
+
+        self.profile_select = QComboBox()
+        self.profile_select.setMinimumWidth(260)
+        self.new_profile_button = QPushButton("Новый профиль")
 
         self.server_dir = PathPicker(file_mode=False)
         self.jar_path = PathPicker(file_mode=True)
@@ -75,6 +84,11 @@ class MinecraftTab(QWidget):
         self.online_mode = QCheckBox()
         self.online_mode.setChecked(True)
         self.motd = QLineEdit("MineBridge FRP server")
+
+        profile_group = QGroupBox("Профиль")
+        profile_layout = QHBoxLayout(profile_group)
+        profile_layout.addWidget(self.profile_select, 1)
+        profile_layout.addWidget(self.new_profile_button)
 
         settings_group = QGroupBox("Сервер и запуск")
         form = QFormLayout(settings_group)
@@ -126,6 +140,7 @@ class MinecraftTab(QWidget):
         controls_layout = QVBoxLayout(controls)
         controls_layout.setContentsMargins(8, 8, 8, 8)
         controls_layout.setSpacing(10)
+        controls_layout.addWidget(profile_group)
         controls_layout.addWidget(settings_group)
         controls_layout.addWidget(actions)
         controls_layout.addStretch(1)
@@ -148,7 +163,59 @@ class MinecraftTab(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(splitter)
 
-        self._load_active_profile()
+        self.reload_active_profile()
+        self.profile_select.currentIndexChanged.connect(self._profile_selected)
+        self.new_profile_button.clicked.connect(self._create_profile)
+
+    def reload_active_profile(self) -> None:
+        self._profile_loading = True
+        try:
+            self._load_profile_options()
+            self._load_active_profile()
+        finally:
+            self._profile_loading = False
+
+    def _load_profile_options(self) -> None:
+        active_id = self.profile_service.get_active_profile().profile.id
+        self.profile_select.blockSignals(True)
+        self.profile_select.clear()
+        for profile in self.profile_service.list_profiles():
+            self.profile_select.addItem(profile.name, profile.id)
+            if profile.id == active_id:
+                self.profile_select.setCurrentIndex(self.profile_select.count() - 1)
+        self.profile_select.blockSignals(False)
+
+    def _profile_selected(self, *_args: object) -> None:
+        if self._profile_loading:
+            return
+        profile_id = self.profile_select.currentData()
+        if profile_id is None:
+            return
+        try:
+            self._save_profile_config()
+            self.profile_service.set_active_profile(int(profile_id))
+        except (ConfigurationError, ValueError) as exc:
+            QMessageBox.warning(self, "Minecraft", str(exc))
+            self.reload_active_profile()
+            return
+        self.reload_active_profile()
+        self.profile_changed.emit()
+
+    def _create_profile(self) -> None:
+        name, accepted = QInputDialog.getText(self, "Новый профиль", "Название профиля:")
+        if not accepted:
+            return
+        try:
+            bundle = self.profile_service.create_profile(name)
+            if bundle.profile.id is None:
+                raise ConfigurationError("Не удалось получить id нового профиля.")
+            self.profile_service.set_active_profile(bundle.profile.id)
+        except (ConfigurationError, ValueError) as exc:
+            QMessageBox.warning(self, "Minecraft", str(exc))
+            return
+        self.reload_active_profile()
+        self._append_log(f"Создан профиль: {bundle.profile.name}")
+        self.profile_changed.emit()
 
     def _load_active_profile(self) -> None:
         config = self.profile_service.get_active_profile().minecraft

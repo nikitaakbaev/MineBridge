@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import os
+from uuid import uuid4
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QThread, QTimer  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
+    QFormLayout,
     QLineEdit,
     QScrollArea,
     QSplitter,
@@ -14,6 +16,7 @@ from PySide6.QtWidgets import (  # noqa: E402
 )
 
 from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
+from minebridge_frp.app.core.single_instance import SingleInstanceGuard  # noqa: E402
 from minebridge_frp.app.services.profile_service import ProfileService  # noqa: E402
 from minebridge_frp.app.ui.main_window import MainWindow  # noqa: E402
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab  # noqa: E402
@@ -93,6 +96,33 @@ def test_vps_tab_saves_settings_from_ui(tmp_path):
     reloaded_tab = VpsTab(context, profile_service)
 
     assert reloaded_tab.password.text() == "ssh-secret"
+
+
+def test_vps_tab_shows_only_selected_auth_fields(tmp_path):
+    _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    profile_service = ProfileService.from_context(context)
+    tab = VpsTab(context, profile_service)
+    form = tab.private_key_path.parentWidget().layout()
+
+    assert isinstance(form, QFormLayout)
+    assert tab.auth_type.currentText() == "password"
+    assert not tab.password.isHidden()
+    assert tab.private_key_path.isHidden()
+    assert form.labelForField(tab.private_key_path).isHidden()
+
+    tab.auth_type.setCurrentText("private_key")
+
+    assert tab.password.isHidden()
+    assert form.labelForField(tab.password).isHidden()
+    assert not tab.private_key_path.isHidden()
+    assert not form.labelForField(tab.private_key_path).isHidden()
 
 
 def test_logs_tab_loads_and_filters_app_log(tmp_path):
@@ -197,3 +227,14 @@ def test_settings_tab_does_not_expose_theme_switching(tmp_path):
     tab = SettingsTab(context)
 
     assert not hasattr(tab, "theme")
+
+
+def test_single_instance_guard_rejects_second_instance():
+    app = _app()
+    key = f"minebridge-frp-test-{uuid4()}"
+    first = SingleInstanceGuard(key)
+    second = SingleInstanceGuard(key)
+
+    assert first.acquire() is True
+    app.processEvents()
+    assert second.acquire() is False

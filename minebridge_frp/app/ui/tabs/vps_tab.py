@@ -124,6 +124,7 @@ class VpsTab(QWidget):
         layout.addWidget(splitter)
 
         self._load_active_profile()
+        self._update_auth_fields()
         self._connect_autosave()
         self._autosave_enabled = True
 
@@ -298,6 +299,7 @@ class VpsTab(QWidget):
         self.host.editingFinished.connect(self._autosave)
         self.username.editingFinished.connect(self._autosave)
         self.auth_type.currentTextChanged.connect(self._autosave)
+        self.auth_type.currentTextChanged.connect(self._update_auth_fields)
         self.password.editingFinished.connect(self._autosave)
         self.private_key_path.input.editingFinished.connect(self._autosave)
         self.install_dir.editingFinished.connect(self._autosave)
@@ -313,6 +315,20 @@ class VpsTab(QWidget):
             self._save_profile_config()
         except (ConfigurationError, ValueError) as exc:
             self._append_log(f"Не удалось сохранить настройки VPS: {exc}")
+
+    def _update_auth_fields(self, *_args: object) -> None:
+        use_private_key = self.auth_type.currentText() == "private_key"
+        self._set_form_row_visible(self.password, not use_private_key)
+        self._set_form_row_visible(self.private_key_path, use_private_key)
+
+    def _set_form_row_visible(self, field: QWidget, visible: bool) -> None:
+        parent = field.parentWidget()
+        form = parent.layout() if parent else None
+        if isinstance(form, QFormLayout):
+            label = form.labelForField(field)
+            if label is not None:
+                label.setVisible(visible)
+        field.setVisible(visible)
 
     def _start_thread(self, function, on_finished) -> None:
         thread = run_in_thread(function, on_finished, self._on_action_failed)

@@ -101,9 +101,6 @@ QLineEdit, QSpinBox, QComboBox {
     min-height: 28px;
     max-height: 42px;
 }
-QSpinBox {
-    padding-right: 25px;
-}
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus {
     border-color: #60a5fa;
 }
@@ -128,33 +125,6 @@ QCheckBox::indicator:hover {
 QCheckBox::indicator:checked {
     background: #3b82f6;
     border-color: #60a5fa;
-}
-QComboBox::drop-down {
-    width: 28px;
-    border-left: 1px solid #324257;
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-    background: #132033;
-}
-QSpinBox::up-button, QSpinBox::down-button {
-    subcontrol-origin: border;
-    width: 23px;
-    border-left: 1px solid #324257;
-    background: #132033;
-}
-QSpinBox::up-button {
-    subcontrol-position: top right;
-    border-top-right-radius: 5px;
-    border-bottom: 1px solid #324257;
-    margin: 1px 1px 0 0;
-}
-QSpinBox::down-button {
-    subcontrol-position: bottom right;
-    border-bottom-right-radius: 5px;
-    margin: 0 1px 1px 0;
-}
-QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-    background: #1b2b41;
 }
 QPushButton {
     border: 1px solid #3a4a5f;

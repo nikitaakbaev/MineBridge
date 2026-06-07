@@ -136,13 +136,6 @@ QComboBox::drop-down {
     border-bottom-right-radius: 5px;
     background: #132033;
 }
-QComboBox::down-arrow {
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid #d7e1ec;
-}
 QSpinBox::up-button, QSpinBox::down-button {
     subcontrol-origin: border;
     width: 23px;
@@ -162,20 +155,6 @@ QSpinBox::down-button {
 }
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {
     background: #1b2b41;
-}
-QSpinBox::up-arrow {
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 5px solid #d7e1ec;
-}
-QSpinBox::down-arrow {
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid #d7e1ec;
 }
 QPushButton {
     border: 1px solid #3a4a5f;
@@ -253,6 +232,13 @@ QComboBox QAbstractItemView {
     color: #f8fafc;
     selection-background-color: #2563eb;
     border: 1px solid #324257;
+}
+QLabel, QCheckBox, QRadioButton {
+    background: transparent;
+    color: #edf2f7;
+}
+QGroupBox QLabel, QGroupBox QCheckBox, QGroupBox QRadioButton {
+    background: transparent;
 }
 QPushButton {
     background: #263548;

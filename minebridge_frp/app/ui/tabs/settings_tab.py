@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QFormLayout,
+    QGroupBox,
     QLineEdit,
     QSpinBox,
     QVBoxLayout,
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from minebridge_frp.app.core.app_context import AppContext
+from minebridge_frp.app.ui.layouts import scroll_panel
 from minebridge_frp.app.ui.theme import apply_theme
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 
@@ -53,10 +55,12 @@ class SettingsTab(QWidget):
         self.auto_update.addItems(["enabled", "disabled"])
         self.auto_update.setCurrentText(str(self.settings.value("auto_update_frp", "enabled")))
 
-        form = QFormLayout()
+        settings_group = QGroupBox("Настройки приложения")
+        form = QFormLayout(settings_group)
         form.setHorizontalSpacing(18)
-        form.setVerticalSpacing(8)
+        form.setVerticalSpacing(10)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("Путь хранения FRP", self.frp_path)
         form.addRow("Путь хранения профилей", self.profile_path)
         form.addRow("Автообновление FRP", self.auto_update)
@@ -65,9 +69,14 @@ class SettingsTab(QWidget):
         form.addRow("Таймаут диагностики, сек", self.timeout)
         form.addRow("При закрытии приложения", self.close_behavior)
 
+        panel = QWidget()
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(8, 8, 8, 8)
+        panel_layout.addWidget(settings_group)
+        panel_layout.addStretch(1)
+
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
-        layout.addStretch(1)
+        layout.addWidget(scroll_panel(panel))
 
         self.theme.currentTextChanged.connect(self._save_theme)
         self.close_behavior.currentTextChanged.connect(

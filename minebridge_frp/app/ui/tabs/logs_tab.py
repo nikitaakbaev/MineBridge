@@ -8,7 +8,6 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices, QTextCursor
 from PySide6.QtWidgets import (
     QFileDialog,
-    QHBoxLayout,
     QMessageBox,
     QPushButton,
     QTabWidget,
@@ -16,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 
 
@@ -47,15 +47,15 @@ class LogsTab(QWidget):
         save_button = QPushButton("Сохранить лог в файл")
         open_folder_button = QPushButton("Открыть папку логов")
 
-        buttons = QHBoxLayout()
-        buttons.addWidget(refresh_button)
-        buttons.addWidget(clear_button)
-        buttons.addWidget(save_button)
-        buttons.addWidget(open_folder_button)
-        buttons.addStretch(1)
+        buttons = QWidget()
+        buttons_layout = FlowLayout(buttons, margin=0, spacing=8)
+        for button in (refresh_button, clear_button, save_button, open_folder_button):
+            buttons_layout.addWidget(prepare_action_button(button))
 
         layout = QVBoxLayout(self)
-        layout.addLayout(buttons)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        layout.addWidget(buttons)
         layout.addWidget(self.tabs)
 
         refresh_button.clicked.connect(self.refresh)

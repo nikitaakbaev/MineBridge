@@ -116,7 +116,7 @@ def test_logs_tab_loads_and_filters_app_log(tmp_path):
     assert "frpc: login succeeded" in tab.viewers["frpc"].text.toPlainText()
 
 
-def test_main_window_uses_scrollable_manual_workflow_tabs(tmp_path):
+def test_main_window_uses_direct_manual_workflow_tabs(tmp_path):
     _app()
     data_dir = tmp_path / "data"
     context = AppContext(
@@ -133,7 +133,7 @@ def test_main_window_uses_scrollable_manual_workflow_tabs(tmp_path):
     labels = [tabs.tabText(index) for index in range(tabs.count())]
     assert labels == ["VPS", "Minecraft", "frpc", "Диагностика", "Логи", "Настройки"]
     assert "Быстрый запуск" not in labels
-    assert all(isinstance(tabs.widget(index), QScrollArea) for index in range(tabs.count()))
+    assert not any(isinstance(tabs.widget(index), QScrollArea) for index in range(tabs.count()))
 
 
 def test_runtime_tabs_have_resizable_log_splitters(tmp_path):
@@ -149,10 +149,11 @@ def test_runtime_tabs_have_resizable_log_splitters(tmp_path):
     tabs = window.centralWidget()
 
     for index in (0, 1, 2):
-        tab_widget = tabs.widget(index).widget()
+        tab_widget = tabs.widget(index)
         splitter = tab_widget.findChild(QSplitter)
         assert splitter is not None
         assert splitter.count() == 2
+        assert isinstance(splitter.widget(0), QScrollArea)
 
 
 def test_minecraft_form_fields_do_not_collapse_or_overstretch(tmp_path):
@@ -170,8 +171,7 @@ def test_minecraft_form_fields_do_not_collapse_or_overstretch(tmp_path):
     app.processEvents()
 
     tabs = window.centralWidget()
-    minecraft_scroll = tabs.widget(1)
-    minecraft_tab = minecraft_scroll.widget()
+    minecraft_tab = tabs.widget(1)
     line_heights = [field.height() for field in minecraft_tab.findChildren(QLineEdit)]
 
     assert min(line_heights) >= 28

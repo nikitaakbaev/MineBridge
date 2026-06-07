@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout,
     QHeaderView,
     QMessageBox,
     QPushButton,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -20,6 +21,7 @@ from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.models.diagnostics import DiagnosticResult
 from minebridge_frp.app.services.diagnostics_service import DiagnosticsService
 from minebridge_frp.app.services.profile_service import ProfileService
+from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button
 from minebridge_frp.app.ui.widgets.status_badge import StatusBadge
 from minebridge_frp.app.ui.workers import run_in_thread
 from minebridge_frp.app.utils.secrets import generate_token
@@ -37,25 +39,37 @@ class DiagnosticsTab(QWidget):
 
         self.run_button = QPushButton("Запустить диагностику")
         self.clear_button = QPushButton("Очистить отчёт")
+        prepare_action_button(self.run_button)
+        prepare_action_button(self.clear_button)
+
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(["Статус", "Проверка", "Описание", "Исправить"])
         self.table.horizontalHeader().setStretchLastSection(False)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.table.verticalHeader().setDefaultSectionSize(38)
+        self.table.setMinimumHeight(180)
 
         self.report = QTextEdit()
         self.report.setReadOnly(True)
         self.report.setPlaceholderText("Отчёт диагностики появится после запуска проверок.")
+        self.report.setMinimumHeight(160)
 
-        buttons = QHBoxLayout()
-        buttons.addWidget(self.run_button)
-        buttons.addWidget(self.clear_button)
-        buttons.addStretch(1)
+        buttons = QWidget()
+        buttons_layout = FlowLayout(buttons, margin=0, spacing=8)
+        buttons_layout.addWidget(self.run_button)
+        buttons_layout.addWidget(self.clear_button)
+
+        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.addWidget(self.table)
+        splitter.addWidget(self.report)
+        splitter.setChildrenCollapsible(False)
+        splitter.setSizes([360, 220])
 
         layout = QVBoxLayout(self)
-        layout.addLayout(buttons)
-        layout.addWidget(self.table)
-        layout.addWidget(self.report)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+        layout.addWidget(buttons)
+        layout.addWidget(splitter)
 
         self.run_button.clicked.connect(self.run_diagnostics)
         self.clear_button.clicked.connect(self._clear)

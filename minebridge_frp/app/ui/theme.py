@@ -23,24 +23,21 @@ QWidget {
 QScrollArea {
     border: none;
 }
-QScrollArea > QWidget > QWidget {
-    padding: 10px;
-}
 QTabWidget::pane {
-    border: 1px solid palette(mid);
+    border: none;
     top: -1px;
 }
 QTabBar::tab {
-    min-width: 92px;
-    padding: 9px 14px;
+    min-width: 74px;
+    padding: 9px 12px;
     margin-right: 2px;
 }
 QGroupBox {
     font-weight: 600;
     border: 1px solid palette(mid);
     border-radius: 6px;
-    margin-top: 14px;
-    padding: 12px;
+    margin-top: 10px;
+    padding: 14px 10px 10px 10px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -50,7 +47,7 @@ QGroupBox::title {
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
     border: 1px solid palette(mid);
     border-radius: 5px;
-    padding: 6px;
+    padding: 5px;
     selection-background-color: #2563eb;
 }
 QLineEdit, QSpinBox, QComboBox {
@@ -71,7 +68,7 @@ QSpinBox::up-button, QSpinBox::down-button {
 QPushButton {
     border: 1px solid palette(mid);
     border-radius: 5px;
-    padding: 7px 11px;
+    padding: 7px 10px;
     min-height: 30px;
 }
 QPushButton:hover {
@@ -82,10 +79,10 @@ QPlainTextEdit {
 }
 QSplitter::handle {
     background: palette(mid);
-    margin: 4px 0;
+    margin: 5px 0;
 }
 QSplitter::handle:vertical {
-    height: 8px;
+    height: 10px;
 }
 """
 
@@ -93,30 +90,30 @@ DARK_STYLESHEET = (
     COMMON_STYLESHEET
     + """
 QWidget {
-    background: #1f2933;
+    background: #17212b;
     color: #edf2f7;
 }
 QTabBar::tab {
-    background: #2d3748;
+    background: #243140;
     color: #edf2f7;
 }
 QTabBar::tab:selected {
-    background: #334155;
+    background: #2f3f52;
     border-bottom: 2px solid #60a5fa;
 }
 QGroupBox {
-    background: #243140;
+    background: #1e2a36;
 }
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
-    background: #111827;
+    background: #101722;
     color: #f8fafc;
 }
 QPushButton {
-    background: #374151;
+    background: #314052;
     color: #f8fafc;
 }
 QPushButton:pressed {
-    background: #1f2937;
+    background: #223041;
 }
 """
 )

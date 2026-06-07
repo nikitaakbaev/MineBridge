@@ -9,11 +9,9 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
-    QScrollArea,
     QStyle,
     QSystemTrayIcon,
     QTabWidget,
-    QWidget,
 )
 
 from minebridge_frp.app.core.app_context import AppContext
@@ -40,7 +38,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("MineBridge FRP")
         self.resize(1180, 800)
-        self.setMinimumSize(1040, 680)
+        self.setMinimumSize(760, 520)
         icon = load_app_icon()
         if icon.isNull():
             icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
@@ -50,17 +48,17 @@ class MainWindow(QMainWindow):
         self.tray_icon = self._create_tray_icon()
 
         tabs = QTabWidget()
+        tabs.setDocumentMode(True)
+        tabs.setMovable(False)
+        tabs.setUsesScrollButtons(True)
         self.minecraft_tab = MinecraftTab(self.profile_service)
         self.frpc_tab = FrpcTab(context, self.profile_service)
-        tabs.addTab(self._scrollable_tab(VpsTab(context, self.profile_service)), "VPS")
-        tabs.addTab(self._scrollable_tab(self.minecraft_tab), "Minecraft")
-        tabs.addTab(self._scrollable_tab(self.frpc_tab), "frpc")
-        tabs.addTab(
-            self._scrollable_tab(DiagnosticsTab(context, self.profile_service)),
-            "Диагностика",
-        )
-        tabs.addTab(self._scrollable_tab(LogsTab(context.log_dir)), "Логи")
-        tabs.addTab(self._scrollable_tab(SettingsTab(context)), "Настройки")
+        tabs.addTab(VpsTab(context, self.profile_service), "VPS")
+        tabs.addTab(self.minecraft_tab, "Minecraft")
+        tabs.addTab(self.frpc_tab, "frpc")
+        tabs.addTab(DiagnosticsTab(context, self.profile_service), "Диагностика")
+        tabs.addTab(LogsTab(context.log_dir), "Логи")
+        tabs.addTab(SettingsTab(context), "Настройки")
 
         self.setCentralWidget(tabs)
         self.statusBar().showMessage("MineBridge FRP готов к настройке профиля")
@@ -119,14 +117,6 @@ class MainWindow(QMainWindow):
         tray.activated.connect(lambda _reason: self.showNormal())
         tray.show()
         return tray
-
-    def _scrollable_tab(self, widget: QWidget) -> QScrollArea:
-        widget.setMinimumHeight(max(widget.minimumHeight(), widget.sizeHint().height()))
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        scroll.setWidget(widget)
-        return scroll
 
     def _quit_from_tray(self) -> None:
         self._force_quit = True

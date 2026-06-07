@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QGridLayout,
     QGroupBox,
     QLineEdit,
     QMessageBox,
@@ -24,6 +23,7 @@ from minebridge_frp.app.models.vps import VpsConfig
 from minebridge_frp.app.services.password_vault import PasswordVault
 from minebridge_frp.app.services.profile_service import ProfileService
 from minebridge_frp.app.services.vps_manager import VpsManager
+from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button, scroll_panel
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 from minebridge_frp.app.ui.workers import run_in_thread
@@ -63,10 +63,12 @@ class VpsTab(QWidget):
         self.install_dir = QLineEdit("/opt/minebridge-frp")
         self.dashboard_enabled = QCheckBox()
 
-        form = QFormLayout()
+        settings_group = QGroupBox("Подключение и frps")
+        form = QFormLayout(settings_group)
         form.setHorizontalSpacing(18)
-        form.setVerticalSpacing(8)
+        form.setVerticalSpacing(10)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("VPS IP / host", self.host)
         form.addRow("SSH port", self.ssh_port)
         form.addRow("SSH username", self.username)
@@ -79,7 +81,7 @@ class VpsTab(QWidget):
         form.addRow("Dashboard port", self.dashboard_port)
 
         actions = QGroupBox("Действия VPS")
-        grid = QGridLayout(actions)
+        actions_layout = FlowLayout(actions, margin=2, spacing=8)
         buttons = [
             ("Сохранить настройки", self._save_clicked),
             ("Проверить SSH", self._check_ssh),
@@ -93,23 +95,27 @@ class VpsTab(QWidget):
             ("Проверить статус frps", self._status_frps),
             ("Открыть порт в firewall", self._open_firewall),
         ]
-        for index, (label, callback) in enumerate(buttons):
-            button = QPushButton(label)
+        for label, callback in buttons:
+            button = prepare_action_button(QPushButton(label))
             button.clicked.connect(callback)
-            grid.addWidget(button, index // 2, index % 2)
+            actions_layout.addWidget(button)
 
         self.log_viewer = LogViewer("VPS logs")
+        self.log_viewer.setMinimumHeight(160)
 
         controls = QWidget()
         controls_layout = QVBoxLayout(controls)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.addLayout(form)
+        controls_layout.setContentsMargins(8, 8, 8, 8)
+        controls_layout.setSpacing(10)
+        controls_layout.addWidget(settings_group)
         controls_layout.addWidget(actions)
+        controls_layout.addStretch(1)
 
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
-        splitter.addWidget(controls)
+        splitter.addWidget(scroll_panel(controls))
         splitter.addWidget(self.log_viewer)
+        splitter.setChildrenCollapsible(False)
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
         splitter.setSizes([420, 260])

@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QGridLayout,
     QGroupBox,
     QLineEdit,
     QMessageBox,
@@ -27,6 +26,7 @@ from minebridge_frp.app.models.tunnel import TunnelConfig
 from minebridge_frp.app.services.download_service import DownloadService
 from minebridge_frp.app.services.frp_manager import FrpManager
 from minebridge_frp.app.services.profile_service import ProfileService
+from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button, scroll_panel
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.workers import run_in_thread
 
@@ -70,10 +70,12 @@ class FrpcTab(QWidget):
         self.auto_start_frpc = QCheckBox()
         self.auto_start_frpc.setChecked(True)
 
-        form = QFormLayout()
+        settings_group = QGroupBox("Локальный frpc")
+        form = QFormLayout(settings_group)
         form.setHorizontalSpacing(18)
-        form.setVerticalSpacing(8)
+        form.setVerticalSpacing(10)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("Профиль", self.profile_name)
         form.addRow("Рабочая папка frpc", self.frpc_folder)
         form.addRow("Локальный IP Minecraft", self.local_ip)
@@ -86,7 +88,7 @@ class FrpcTab(QWidget):
         form.addRow("Автозапуск frpc вместе с Minecraft", self.auto_start_frpc)
 
         actions = QGroupBox("Действия frpc")
-        grid = QGridLayout(actions)
+        actions_layout = FlowLayout(actions, margin=2, spacing=8)
         buttons = [
             ("Сохранить настройки", self._save_clicked),
             ("Сгенерировать токен", self._generate_token),
@@ -97,23 +99,27 @@ class FrpcTab(QWidget):
             ("Проверить внешний порт", self._check_external_port),
             ("Открыть рабочую папку", self._open_frpc_folder),
         ]
-        for index, (label, callback) in enumerate(buttons):
-            button = QPushButton(label)
+        for label, callback in buttons:
+            button = prepare_action_button(QPushButton(label))
             button.clicked.connect(callback)
-            grid.addWidget(button, index // 3, index % 3)
+            actions_layout.addWidget(button)
 
         self.log_viewer = LogViewer("Логи локального frpc")
+        self.log_viewer.setMinimumHeight(160)
 
         controls = QWidget()
         controls_layout = QVBoxLayout(controls)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.addLayout(form)
+        controls_layout.setContentsMargins(8, 8, 8, 8)
+        controls_layout.setSpacing(10)
+        controls_layout.addWidget(settings_group)
         controls_layout.addWidget(actions)
+        controls_layout.addStretch(1)
 
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
-        splitter.addWidget(controls)
+        splitter.addWidget(scroll_panel(controls))
         splitter.addWidget(self.log_viewer)
+        splitter.setChildrenCollapsible(False)
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
         splitter.setSizes([430, 260])

@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
-    QGridLayout,
     QGroupBox,
     QLineEdit,
     QMessageBox,
@@ -25,6 +24,7 @@ from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
 from minebridge_frp.app.models.minecraft import MinecraftConfig
 from minebridge_frp.app.services.minecraft_manager import MinecraftManager
 from minebridge_frp.app.services.profile_service import ProfileService
+from minebridge_frp.app.ui.layouts import FlowLayout, prepare_action_button, scroll_panel
 from minebridge_frp.app.ui.widgets.console_input import ConsoleInput
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
@@ -76,10 +76,12 @@ class MinecraftTab(QWidget):
         self.online_mode.setChecked(True)
         self.motd = QLineEdit("MineBridge FRP server")
 
-        form = QFormLayout()
+        settings_group = QGroupBox("Сервер и запуск")
+        form = QFormLayout(settings_group)
         form.setHorizontalSpacing(18)
-        form.setVerticalSpacing(8)
+        form.setVerticalSpacing(10)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.addRow("Папка сервера", self.server_dir)
         form.addRow("server.jar", self.jar_path)
         form.addRow("Java path", self.java_path)
@@ -98,7 +100,7 @@ class MinecraftTab(QWidget):
         form.addRow("simulation-distance", self.simulation_distance)
 
         actions = QGroupBox("Действия Minecraft")
-        grid = QGridLayout(actions)
+        actions_layout = FlowLayout(actions, margin=2, spacing=8)
         buttons = [
             ("Найти Java", self._find_java),
             ("Проверить Java", self._check_java),
@@ -110,20 +112,23 @@ class MinecraftTab(QWidget):
             ("Остановить Minecraft-сервер", self._stop_server),
             ("Перезапустить Minecraft-сервер", self._restart_server),
         ]
-        for index, (label, callback) in enumerate(buttons):
-            button = QPushButton(label)
+        for label, callback in buttons:
+            button = prepare_action_button(QPushButton(label))
             button.clicked.connect(callback)
-            grid.addWidget(button, index // 3, index % 3)
+            actions_layout.addWidget(button)
 
         self.log_viewer = LogViewer("Minecraft logs")
+        self.log_viewer.setMinimumHeight(160)
         self.console_input = ConsoleInput()
         self.console_input.command_submitted.connect(self._send_command)
 
         controls = QWidget()
         controls_layout = QVBoxLayout(controls)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.addLayout(form)
+        controls_layout.setContentsMargins(8, 8, 8, 8)
+        controls_layout.setSpacing(10)
+        controls_layout.addWidget(settings_group)
         controls_layout.addWidget(actions)
+        controls_layout.addStretch(1)
 
         output = QWidget()
         output_layout = QVBoxLayout(output)
@@ -133,8 +138,9 @@ class MinecraftTab(QWidget):
 
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
-        splitter.addWidget(controls)
+        splitter.addWidget(scroll_panel(controls))
         splitter.addWidget(output)
+        splitter.setChildrenCollapsible(False)
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
         splitter.setSizes([540, 260])

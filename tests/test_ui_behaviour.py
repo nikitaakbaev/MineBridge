@@ -83,7 +83,7 @@ def test_vps_tab_saves_settings_from_ui(tmp_path):
     tab.dashboard_port.setValue(7501)
 
     tab._save_profile_config()
-    saved = profile_service.get_active_profile().vps
+    saved = profile_service.get_active_vps_profile().config
 
     assert saved.host == "193.124.67.110"
     assert saved.ssh_port == 2222
@@ -137,19 +137,24 @@ def test_vps_and_minecraft_tabs_can_switch_profiles(tmp_path):
         database_path=data_dir / "minebridge-frp.sqlite3",
     )
     profile_service = ProfileService.from_context(context)
-    profile_service.create_profile("Paper test")
+    profile_service.create_vps_profile("VPS test")
+    profile_service.create_minecraft_profile("Paper test")
     vps_tab = VpsTab(context, profile_service)
     minecraft_tab = MinecraftTab(profile_service)
 
     assert vps_tab.profile_select.count() == 2
     assert minecraft_tab.profile_select.count() == 2
 
-    target_index = vps_tab.profile_select.findText("Paper test")
-    assert target_index >= 0
-    vps_tab.profile_select.setCurrentIndex(target_index)
-    minecraft_tab.reload_active_profile()
+    vps_index = vps_tab.profile_select.findText("VPS test")
+    minecraft_index = minecraft_tab.profile_select.findText("Paper test")
+    assert vps_index >= 0
+    assert minecraft_index >= 0
+    vps_tab.profile_select.setCurrentIndex(vps_index)
+    minecraft_tab.profile_select.setCurrentIndex(minecraft_index)
 
-    assert profile_service.get_active_profile().profile.name == "Paper test"
+    assert profile_service.get_active_vps_profile().profile.name == "VPS test"
+    assert profile_service.get_active_minecraft_profile().profile.name == "Paper test"
+    assert vps_tab.profile_select.currentText() == "VPS test"
     assert minecraft_tab.profile_select.currentText() == "Paper test"
 
 

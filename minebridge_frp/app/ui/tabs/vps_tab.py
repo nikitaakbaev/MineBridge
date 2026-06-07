@@ -156,17 +156,17 @@ class VpsTab(QWidget):
             self._autosave_enabled = was_autosave_enabled
 
     def _load_profile_options(self) -> None:
-        active_id = self.profile_service.get_active_profile().profile.id
+        active_id = self.profile_service.get_active_vps_profile().profile.id
         self.profile_select.blockSignals(True)
         self.profile_select.clear()
-        for profile in self.profile_service.list_profiles():
+        for profile in self.profile_service.list_vps_profiles():
             self.profile_select.addItem(profile.name, profile.id)
             if profile.id == active_id:
                 self.profile_select.setCurrentIndex(self.profile_select.count() - 1)
         self.profile_select.blockSignals(False)
 
     def _load_active_profile(self) -> None:
-        config = self.profile_service.get_active_profile().vps
+        config = self.profile_service.get_active_vps_profile().config
         self.host.setText(config.host)
         self.ssh_port.setValue(config.ssh_port)
         self.username.setText(config.username)
@@ -193,12 +193,10 @@ class VpsTab(QWidget):
         )
 
     def _save_profile_config(self) -> VpsConfig:
-        bundle = self.profile_service.get_active_profile()
+        bundle = self.profile_service.get_active_vps_profile()
         config = self._config_from_ui()
-        bundle.vps = config.model_copy(
-            update={"id": bundle.vps.id, "profile_id": bundle.profile.id}
-        )
-        self.profile_service.save_profile(bundle)
+        bundle.config = config.model_copy(update={"id": bundle.config.id})
+        self.profile_service.save_vps_profile(bundle)
         return config
 
     def _manager(self, config: VpsConfig, password: str) -> VpsManager:
@@ -251,11 +249,10 @@ class VpsTab(QWidget):
     def _install_frp(self) -> None:
         try:
             self._save_profile_config()
-            bundle = self.profile_service.get_active_profile()
-            token = bundle.tunnel.frp_token
+            token = self.profile_service.get_active_tunnel_profile().config.frp_token
             if not token:
-                raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке Туннель.")
-            config = bundle.vps
+                raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке frpc.")
+            config = self.profile_service.get_active_vps_profile().config
             password = self.password.text()
         except (ConfigurationError, ValueError) as exc:
             self._on_action_failed(str(exc))
@@ -276,11 +273,10 @@ class VpsTab(QWidget):
     def _create_frps_toml(self) -> None:
         try:
             self._save_profile_config()
-            bundle = self.profile_service.get_active_profile()
-            token = bundle.tunnel.frp_token
+            token = self.profile_service.get_active_tunnel_profile().config.frp_token
             if not token:
-                raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке Туннель.")
-            config = bundle.vps
+                raise ConfigurationError("Сначала сгенерируйте FRP token во вкладке frpc.")
+            config = self.profile_service.get_active_vps_profile().config
             password = self.password.text()
         except (ConfigurationError, ValueError) as exc:
             self._on_action_failed(str(exc))
@@ -355,7 +351,7 @@ class VpsTab(QWidget):
             return
         try:
             self._save_profile_config()
-            self.profile_service.set_active_profile(int(profile_id))
+            self.profile_service.set_active_vps_profile(int(profile_id))
         except (ConfigurationError, ValueError) as exc:
             self._on_action_failed(str(exc))
             self.reload_active_profile()
@@ -369,10 +365,10 @@ class VpsTab(QWidget):
         if not accepted:
             return
         try:
-            bundle = self.profile_service.create_profile(name)
+            bundle = self.profile_service.create_vps_profile(name)
             if bundle.profile.id is None:
                 raise ConfigurationError("Не удалось получить id нового профиля.")
-            self.profile_service.set_active_profile(bundle.profile.id)
+            self.profile_service.set_active_vps_profile(bundle.profile.id)
         except (ConfigurationError, ValueError) as exc:
             self._on_action_failed(str(exc))
             return

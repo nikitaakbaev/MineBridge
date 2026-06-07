@@ -12,7 +12,13 @@ from minebridge_frp.app.core.exceptions import ConfigurationError
 from minebridge_frp.app.db.database import create_session_factory, create_sqlite_engine
 from minebridge_frp.app.db.migrations import run_migrations
 from minebridge_frp.app.db.repositories import ProfileRepository
-from minebridge_frp.app.models.profile import Profile, ProfileBundle
+from minebridge_frp.app.models.profile import (
+    MinecraftProfileBundle,
+    Profile,
+    ProfileBundle,
+    TunnelProfileBundle,
+    VpsProfileBundle,
+)
 
 
 class ProfileService:
@@ -25,6 +31,7 @@ class ProfileService:
         self.session_factory = create_session_factory(self.engine)
         self.repository = ProfileRepository(self.session_factory)
         self.ensure_default_profile()
+        self.ensure_default_section_profiles()
 
     @classmethod
     def from_context(cls, context: AppContext) -> ProfileService:
@@ -43,6 +50,27 @@ class ProfileService:
         if updated is None:
             raise ConfigurationError("Не удалось выбрать профиль по умолчанию")
         return updated
+
+    def ensure_default_section_profiles(self) -> None:
+        legacy = self.get_active_profile()
+        if self.repository.get_default_vps_profile() is None:
+            self.repository.create_vps_profile(
+                legacy.profile.name,
+                legacy.vps,
+                is_default=True,
+            )
+        if self.repository.get_default_minecraft_profile() is None:
+            self.repository.create_minecraft_profile(
+                legacy.profile.name,
+                legacy.minecraft,
+                is_default=True,
+            )
+        if self.repository.get_default_tunnel_profile() is None:
+            self.repository.create_tunnel_profile(
+                legacy.profile.name,
+                legacy.tunnel,
+                is_default=True,
+            )
 
     def list_profiles(self) -> list[Profile]:
         return self.repository.list_profiles()
@@ -72,6 +100,102 @@ class ProfileService:
 
     def save_profile(self, bundle: ProfileBundle) -> ProfileBundle:
         return self.repository.save_bundle(bundle)
+
+    def get_active_configuration(self) -> ProfileBundle:
+        legacy = self.get_active_profile()
+        return ProfileBundle(
+            profile=legacy.profile,
+            vps=self.get_active_vps_profile().config,
+            minecraft=self.get_active_minecraft_profile().config,
+            tunnel=self.get_active_tunnel_profile().config,
+        )
+
+    def list_vps_profiles(self) -> list[Profile]:
+        return self.repository.list_vps_profiles()
+
+    def get_active_vps_profile(self) -> VpsProfileBundle:
+        bundle = self.repository.get_default_vps_profile()
+        if bundle is None:
+            legacy = self.get_active_profile()
+            return self.repository.create_vps_profile(
+                legacy.profile.name,
+                legacy.vps,
+                is_default=True,
+            )
+        return bundle
+
+    def create_vps_profile(self, name: str) -> VpsProfileBundle:
+        if not name.strip():
+            raise ConfigurationError("Название VPS-профиля не может быть пустым")
+        return self.repository.create_vps_profile(name.strip())
+
+    def set_active_vps_profile(self, profile_id: int) -> VpsProfileBundle:
+        bundle = self.repository.set_default_vps_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"VPS-профиль с id={profile_id} не найден")
+        return bundle
+
+    def save_vps_profile(self, bundle: VpsProfileBundle) -> VpsProfileBundle:
+        return self.repository.save_vps_profile(bundle)
+
+    def list_minecraft_profiles(self) -> list[Profile]:
+        return self.repository.list_minecraft_profiles()
+
+    def get_active_minecraft_profile(self) -> MinecraftProfileBundle:
+        bundle = self.repository.get_default_minecraft_profile()
+        if bundle is None:
+            legacy = self.get_active_profile()
+            return self.repository.create_minecraft_profile(
+                legacy.profile.name,
+                legacy.minecraft,
+                is_default=True,
+            )
+        return bundle
+
+    def create_minecraft_profile(self, name: str) -> MinecraftProfileBundle:
+        if not name.strip():
+            raise ConfigurationError("Название Minecraft-профиля не может быть пустым")
+        return self.repository.create_minecraft_profile(name.strip())
+
+    def set_active_minecraft_profile(self, profile_id: int) -> MinecraftProfileBundle:
+        bundle = self.repository.set_default_minecraft_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"Minecraft-профиль с id={profile_id} не найден")
+        return bundle
+
+    def save_minecraft_profile(
+        self,
+        bundle: MinecraftProfileBundle,
+    ) -> MinecraftProfileBundle:
+        return self.repository.save_minecraft_profile(bundle)
+
+    def list_tunnel_profiles(self) -> list[Profile]:
+        return self.repository.list_tunnel_profiles()
+
+    def get_active_tunnel_profile(self) -> TunnelProfileBundle:
+        bundle = self.repository.get_default_tunnel_profile()
+        if bundle is None:
+            legacy = self.get_active_profile()
+            return self.repository.create_tunnel_profile(
+                legacy.profile.name,
+                legacy.tunnel,
+                is_default=True,
+            )
+        return bundle
+
+    def create_tunnel_profile(self, name: str) -> TunnelProfileBundle:
+        if not name.strip():
+            raise ConfigurationError("Название frpc-профиля не может быть пустым")
+        return self.repository.create_tunnel_profile(name.strip())
+
+    def set_active_tunnel_profile(self, profile_id: int) -> TunnelProfileBundle:
+        bundle = self.repository.set_default_tunnel_profile(profile_id)
+        if bundle is None:
+            raise ConfigurationError(f"frpc-профиль с id={profile_id} не найден")
+        return bundle
+
+    def save_tunnel_profile(self, bundle: TunnelProfileBundle) -> TunnelProfileBundle:
+        return self.repository.save_tunnel_profile(bundle)
 
     def export_profile(self, profile_id: int, path: Path) -> Path:
         bundle = self.get_profile(profile_id)

@@ -19,6 +19,7 @@ Stage 2 is implemented:
 - SQLite database with SQLAlchemy tables;
 - automatic default profile creation;
 - profile listing and active profile selection;
+- independent VPS, Minecraft, and frpc profile lists for mixing saved configurations;
 - profile JSON import/export from the Quick Start tab.
 
 Stage 3 is implemented:
@@ -57,6 +58,7 @@ Stage 6 is implemented as separate manual workflow tabs:
 - VPS tab manages SSH, remote frps install/config/systemd/firewall;
 - Minecraft tab manages the local server folder, server.properties, EULA, and Java process;
 - frpc tab manages the local frpc working folder, frpc.toml, binary download, launch, logs, and external port checks;
+- VPS, Minecraft, and frpc tabs have separate profile selectors;
 - the old all-in-one Quick Start tab has been removed to keep each action explicit.
 
 Stage 7 is implemented:

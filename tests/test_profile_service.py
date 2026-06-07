@@ -34,3 +34,23 @@ def test_profile_service_exports_and_imports_profile(tmp_path):
     assert imported.profile.id != created.profile.id
     assert imported.profile.name == "Paper friends"
     assert service.get_active_profile().profile.id == imported.profile.id
+
+
+def test_profile_service_keeps_section_profiles_independent(tmp_path):
+    service = ProfileService(tmp_path / "profiles.sqlite3")
+    vps = service.create_vps_profile("VPS Москва")
+    minecraft = service.create_minecraft_profile("Paper 1.21")
+    tunnel = service.create_tunnel_profile("frpc friends")
+
+    service.set_active_vps_profile(vps.profile.id)
+    service.set_active_minecraft_profile(minecraft.profile.id)
+    service.set_active_tunnel_profile(tunnel.profile.id)
+
+    active = service.get_active_configuration()
+
+    assert service.get_active_vps_profile().profile.name == "VPS Москва"
+    assert service.get_active_minecraft_profile().profile.name == "Paper 1.21"
+    assert service.get_active_tunnel_profile().profile.name == "frpc friends"
+    assert active.vps == service.get_active_vps_profile().config
+    assert active.minecraft == service.get_active_minecraft_profile().config
+    assert active.tunnel == service.get_active_tunnel_profile().config

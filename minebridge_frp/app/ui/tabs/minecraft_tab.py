@@ -176,10 +176,10 @@ class MinecraftTab(QWidget):
             self._profile_loading = False
 
     def _load_profile_options(self) -> None:
-        active_id = self.profile_service.get_active_profile().profile.id
+        active_id = self.profile_service.get_active_minecraft_profile().profile.id
         self.profile_select.blockSignals(True)
         self.profile_select.clear()
-        for profile in self.profile_service.list_profiles():
+        for profile in self.profile_service.list_minecraft_profiles():
             self.profile_select.addItem(profile.name, profile.id)
             if profile.id == active_id:
                 self.profile_select.setCurrentIndex(self.profile_select.count() - 1)
@@ -193,7 +193,7 @@ class MinecraftTab(QWidget):
             return
         try:
             self._save_profile_config()
-            self.profile_service.set_active_profile(int(profile_id))
+            self.profile_service.set_active_minecraft_profile(int(profile_id))
         except (ConfigurationError, ValueError) as exc:
             QMessageBox.warning(self, "Minecraft", str(exc))
             self.reload_active_profile()
@@ -206,10 +206,10 @@ class MinecraftTab(QWidget):
         if not accepted:
             return
         try:
-            bundle = self.profile_service.create_profile(name)
+            bundle = self.profile_service.create_minecraft_profile(name)
             if bundle.profile.id is None:
                 raise ConfigurationError("Не удалось получить id нового профиля.")
-            self.profile_service.set_active_profile(bundle.profile.id)
+            self.profile_service.set_active_minecraft_profile(bundle.profile.id)
         except (ConfigurationError, ValueError) as exc:
             QMessageBox.warning(self, "Minecraft", str(exc))
             return
@@ -218,7 +218,7 @@ class MinecraftTab(QWidget):
         self.profile_changed.emit()
 
     def _load_active_profile(self) -> None:
-        config = self.profile_service.get_active_profile().minecraft
+        config = self.profile_service.get_active_minecraft_profile().config
         self.server_dir.set_path(config.server_dir)
         self.jar_path.set_path(config.jar_path)
         self.java_path.set_path(config.java_path)
@@ -253,12 +253,10 @@ class MinecraftTab(QWidget):
         )
 
     def _save_profile_config(self) -> MinecraftConfig:
-        bundle = self.profile_service.get_active_profile()
+        bundle = self.profile_service.get_active_minecraft_profile()
         config = self._config_from_ui()
-        bundle.minecraft = config.model_copy(
-            update={"id": bundle.minecraft.id, "profile_id": bundle.profile.id}
-        )
-        self.profile_service.save_profile(bundle)
+        bundle.config = config.model_copy(update={"id": bundle.config.id})
+        self.profile_service.save_minecraft_profile(bundle)
         return config
 
     def _find_java(self) -> None:

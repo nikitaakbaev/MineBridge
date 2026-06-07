@@ -44,3 +44,30 @@ class ProfileBundle(BaseModel):
                 "tunnel": self.tunnel.model_copy(update={"id": None, "profile_id": None}),
             },
         )
+
+
+class VpsProfileBundle(BaseModel):
+    """Named VPS settings preset."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    profile: Profile
+    config: VpsConfig = Field(default_factory=VpsConfig)
+
+
+class MinecraftProfileBundle(BaseModel):
+    """Named Minecraft server settings preset."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    profile: Profile
+    config: MinecraftConfig = Field(default_factory=MinecraftConfig)
+
+
+class TunnelProfileBundle(BaseModel):
+    """Named local frpc settings preset."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    profile: Profile
+    config: TunnelConfig = Field(default_factory=TunnelConfig)

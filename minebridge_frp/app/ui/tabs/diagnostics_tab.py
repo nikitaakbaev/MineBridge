@@ -77,7 +77,7 @@ class DiagnosticsTab(QWidget):
     def run_diagnostics(self) -> None:
         self.run_button.setEnabled(False)
         self.report.setPlainText("Диагностика выполняется...")
-        bundle = self.profile_service.get_active_profile()
+        bundle = self.profile_service.get_active_configuration()
         thread = run_in_thread(
             lambda: self.service.run_profile_checks(bundle),
             self._show_results,
@@ -112,17 +112,18 @@ class DiagnosticsTab(QWidget):
             self.table.setItem(row, 3, QTableWidgetItem(""))
 
     def _run_fix(self, fix_id: str) -> None:
-        bundle = self.profile_service.get_active_profile()
         if fix_id == "generate_token":
-            bundle.tunnel.frp_token = generate_token()
-            self.profile_service.save_profile(bundle)
+            bundle = self.profile_service.get_active_tunnel_profile()
+            bundle.config.frp_token = generate_token()
+            self.profile_service.save_tunnel_profile(bundle)
             QMessageBox.information(self, "Диагностика", "FRP token сгенерирован и сохранён.")
             self.run_diagnostics()
             return
 
         if fix_id == "open_eula":
-            server_dir = Path(bundle.minecraft.server_dir)
-            if not bundle.minecraft.server_dir:
+            config = self.profile_service.get_active_minecraft_profile().config
+            server_dir = Path(config.server_dir)
+            if not config.server_dir:
                 QMessageBox.warning(self, "Диагностика", "Сначала выберите папку сервера.")
                 return
             self.service.minecraft_manager.open_eula(server_dir)
@@ -130,19 +131,20 @@ class DiagnosticsTab(QWidget):
             return
 
         if fix_id == "save_server_properties":
-            if not bundle.minecraft.server_dir:
+            config = self.profile_service.get_active_minecraft_profile().config
+            if not config.server_dir:
                 QMessageBox.warning(self, "Диагностика", "Сначала выберите папку сервера.")
                 return
             path = self.service.minecraft_manager.save_server_properties(
-                Path(bundle.minecraft.server_dir),
+                Path(config.server_dir),
                 {
-                    "server-port": bundle.minecraft.mc_port,
-                    "online-mode": bundle.minecraft.online_mode,
-                    "difficulty": bundle.minecraft.difficulty,
-                    "max-players": bundle.minecraft.max_players,
-                    "motd": bundle.minecraft.motd,
-                    "view-distance": bundle.minecraft.view_distance,
-                    "simulation-distance": bundle.minecraft.simulation_distance,
+                    "server-port": config.mc_port,
+                    "online-mode": config.online_mode,
+                    "difficulty": config.difficulty,
+                    "max-players": config.max_players,
+                    "motd": config.motd,
+                    "view-distance": config.view_distance,
+                    "simulation-distance": config.simulation_distance,
                 },
             )
             QMessageBox.information(self, "Диагностика", f"server.properties сохранён: {path}")
@@ -154,8 +156,9 @@ class DiagnosticsTab(QWidget):
             if not java:
                 QMessageBox.warning(self, "Диагностика", "Java не найдена в PATH.")
                 return
-            bundle.minecraft.java_path = java
-            self.profile_service.save_profile(bundle)
+            bundle = self.profile_service.get_active_minecraft_profile()
+            bundle.config.java_path = java
+            self.profile_service.save_minecraft_profile(bundle)
             QMessageBox.information(self, "Диагностика", f"Java сохранена: {java}")
             self.run_diagnostics()
             return

@@ -116,6 +116,86 @@ class TunnelConfigRecord(Base):
     profile: Mapped[ProfileRecord] = relationship(back_populates="tunnel")
 
 
+class VpsProfileRecord(Base):
+    """Independent VPS profile table."""
+
+    __tablename__ = "vps_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    host: Mapped[str] = mapped_column(String(255), default="")
+    ssh_port: Mapped[int] = mapped_column(Integer, default=22)
+    username: Mapped[str] = mapped_column(String(120), default="")
+    auth_type: Mapped[str] = mapped_column(String(32), default="password")
+    password_encrypted: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    private_key_path: Mapped[str] = mapped_column(String(1024), default="")
+    install_dir: Mapped[str] = mapped_column(String(1024), default="/opt/minebridge-frp")
+    frps_bind_port: Mapped[int] = mapped_column(Integer, default=7000)
+    dashboard_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    dashboard_port: Mapped[int] = mapped_column(Integer, default=7500)
+
+
+class MinecraftProfileRecord(Base):
+    """Independent Minecraft server profile table."""
+
+    __tablename__ = "minecraft_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    server_dir: Mapped[str] = mapped_column(String(1024), default="")
+    jar_path: Mapped[str] = mapped_column(String(1024), default="")
+    java_path: Mapped[str] = mapped_column(String(1024), default="")
+    xms: Mapped[str] = mapped_column(String(32), default="2G")
+    xmx: Mapped[str] = mapped_column(String(32), default="4G")
+    mc_port: Mapped[int] = mapped_column(Integer, default=25565)
+    server_type: Mapped[str] = mapped_column(String(32), default="Vanilla")
+    mc_version: Mapped[str] = mapped_column(String(64), default="")
+    online_mode: Mapped[bool] = mapped_column(Boolean, default=True)
+    difficulty: Mapped[str] = mapped_column(String(32), default="normal")
+    max_players: Mapped[int] = mapped_column(Integer, default=20)
+    motd: Mapped[str] = mapped_column(String(255), default="MineBridge FRP server")
+    view_distance: Mapped[int] = mapped_column(Integer, default=10)
+    simulation_distance: Mapped[int] = mapped_column(Integer, default=10)
+
+
+class TunnelProfileRecord(Base):
+    """Independent local frpc profile table."""
+
+    __tablename__ = "tunnel_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    local_ip: Mapped[str] = mapped_column(String(64), default="127.0.0.1")
+    local_port: Mapped[int] = mapped_column(Integer, default=25565)
+    remote_port: Mapped[int] = mapped_column(Integer, default=25565)
+    protocol: Mapped[str] = mapped_column(String(16), default="tcp")
+    frp_server_addr: Mapped[str] = mapped_column(String(255), default="")
+    frp_server_bind_port: Mapped[int] = mapped_column(Integer, default=7000)
+    frp_token: Mapped[str] = mapped_column(String(255), default="")
+    auto_start_frpc: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 SessionFactory = sessionmaker
 
 

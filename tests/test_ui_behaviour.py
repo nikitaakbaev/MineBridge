@@ -17,6 +17,7 @@ from minebridge_frp.app.core.app_context import AppContext  # noqa: E402
 from minebridge_frp.app.services.profile_service import ProfileService  # noqa: E402
 from minebridge_frp.app.ui.main_window import MainWindow  # noqa: E402
 from minebridge_frp.app.ui.tabs.logs_tab import LogsTab  # noqa: E402
+from minebridge_frp.app.ui.tabs.settings_tab import SettingsTab  # noqa: E402
 from minebridge_frp.app.ui.tabs.vps_tab import VpsTab  # noqa: E402
 from minebridge_frp.app.ui.widgets.log_viewer import clean_log_line  # noqa: E402
 from minebridge_frp.app.ui.workers import run_in_thread  # noqa: E402
@@ -182,3 +183,17 @@ def test_log_viewer_cleans_ansi_control_output():
     dirty = "\x1b[1;34m2026-06-06 login success\x1b[0m\r"
 
     assert clean_log_line(dirty) == "2026-06-06 login success"
+
+
+def test_settings_tab_does_not_expose_theme_switching(tmp_path):
+    _app()
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    tab = SettingsTab(context)
+
+    assert not hasattr(tab, "theme")

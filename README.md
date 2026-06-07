@@ -71,8 +71,8 @@ Stage 8 is implemented:
 
 - status badges are used in runtime and diagnostics views;
 - window geometry/state are saved and restored;
-- theme and close behavior are persisted through QSettings;
-- dark/light/system theme switching is available;
+- the interface uses a permanent dark theme;
+- close behavior is persisted through QSettings;
 - close behavior supports ask, tray minimize, stop-all, and leave-running modes;
 - tray icon is enabled when the platform provides a system tray.
 

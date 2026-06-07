@@ -5,54 +5,103 @@ from __future__ import annotations
 from PySide6.QtWidgets import QApplication
 
 
-def apply_theme(app: QApplication, theme: str) -> None:
-    """Apply a compact readable theme."""
-    if theme == "light":
-        app.setStyleSheet(LIGHT_STYLESHEET)
-        return
-    if theme == "dark":
-        app.setStyleSheet(DARK_STYLESHEET)
-        return
-    app.setStyleSheet(LIGHT_STYLESHEET)
+def apply_theme(app: QApplication) -> None:
+    """Apply the permanent MineBridge dark theme."""
+    app.setStyleSheet(DARK_STYLESHEET)
 
 
 COMMON_STYLESHEET = """
 QWidget {
     font-size: 13px;
 }
+QMainWindow, QDialog {
+    background: #111923;
+}
 QScrollArea {
     border: none;
+    background: transparent;
+}
+QScrollBar:vertical {
+    background: #101722;
+    width: 10px;
+    margin: 2px;
+    border-radius: 5px;
+}
+QScrollBar::handle:vertical {
+    background: #3b4a5e;
+    min-height: 36px;
+    border-radius: 5px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #51627a;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar:horizontal {
+    background: #101722;
+    height: 10px;
+    margin: 2px;
+    border-radius: 5px;
+}
+QScrollBar::handle:horizontal {
+    background: #3b4a5e;
+    min-width: 36px;
+    border-radius: 5px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #51627a;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
 }
 QTabWidget::pane {
     border: none;
     top: -1px;
 }
+QTabWidget {
+    background: #111923;
+}
+QTabBar {
+    background: #111923;
+}
 QTabBar::tab {
     min-width: 74px;
-    padding: 9px 12px;
-    margin-right: 2px;
+    padding: 10px 14px;
+    margin-right: 1px;
+    border: 1px solid #273443;
+    border-bottom: none;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
 }
 QGroupBox {
     font-weight: 600;
-    border: 1px solid palette(mid);
+    border: 1px solid #2e3d4e;
     border-radius: 6px;
-    margin-top: 10px;
-    padding: 14px 10px 10px 10px;
+    margin-top: 12px;
+    padding: 16px 12px 12px 12px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
-    padding: 0 5px;
+    padding: 0 6px;
+    color: #d7e1ec;
 }
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
-    border: 1px solid palette(mid);
+    border: 1px solid #324257;
     border-radius: 5px;
     padding: 5px;
-    selection-background-color: #2563eb;
+    selection-background-color: #3b82f6;
 }
 QLineEdit, QSpinBox, QComboBox {
     min-height: 28px;
     max-height: 42px;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border-color: #60a5fa;
+}
+QLineEdit[readOnly="true"] {
+    color: #aebacc;
 }
 QCheckBox {
     min-height: 28px;
@@ -66,23 +115,46 @@ QSpinBox::up-button, QSpinBox::down-button {
     width: 22px;
 }
 QPushButton {
-    border: 1px solid palette(mid);
+    border: 1px solid #3a4a5f;
     border-radius: 5px;
-    padding: 7px 10px;
+    padding: 8px 11px;
     min-height: 30px;
 }
 QPushButton:hover {
-    border-color: #2563eb;
+    border-color: #60a5fa;
+}
+QPushButton:disabled {
+    color: #7f8da0;
+    border-color: #283545;
+    background: #202b38;
 }
 QPlainTextEdit {
     font-family: "JetBrains Mono", "Consolas", monospace;
 }
+QTableWidget {
+    gridline-color: #293849;
+    alternate-background-color: #141e2a;
+}
+QHeaderView::section {
+    background: #202b38;
+    color: #dce7f3;
+    border: none;
+    border-right: 1px solid #2e3d4e;
+    border-bottom: 1px solid #2e3d4e;
+    padding: 7px;
+}
 QSplitter::handle {
-    background: palette(mid);
-    margin: 5px 0;
+    background: #2b3a4d;
+    margin: 6px 0;
+    border-radius: 4px;
 }
 QSplitter::handle:vertical {
     height: 10px;
+}
+QStatusBar {
+    background: #111923;
+    color: #aebacc;
+    border-top: 1px solid #263443;
 }
 """
 
@@ -90,62 +162,41 @@ DARK_STYLESHEET = (
     COMMON_STYLESHEET
     + """
 QWidget {
-    background: #17212b;
+    background: #111923;
     color: #edf2f7;
 }
 QTabBar::tab {
-    background: #243140;
-    color: #edf2f7;
+    background: #182332;
+    color: #b9c6d6;
 }
 QTabBar::tab:selected {
-    background: #2f3f52;
+    background: #223044;
+    color: #ffffff;
     border-bottom: 2px solid #60a5fa;
 }
+QTabBar::tab:hover {
+    background: #202d3f;
+    color: #ffffff;
+}
 QGroupBox {
-    background: #1e2a36;
+    background: #172231;
 }
 QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
-    background: #101722;
+    background: #0d1420;
     color: #f8fafc;
 }
+QComboBox QAbstractItemView {
+    background: #0d1420;
+    color: #f8fafc;
+    selection-background-color: #2563eb;
+    border: 1px solid #324257;
+}
 QPushButton {
-    background: #314052;
+    background: #263548;
     color: #f8fafc;
 }
 QPushButton:pressed {
-    background: #223041;
-}
-"""
-)
-
-LIGHT_STYLESHEET = (
-    COMMON_STYLESHEET
-    + """
-QWidget {
-    background: #f8fafc;
-    color: #172033;
-}
-QTabBar::tab {
-    background: #e5e7eb;
-    color: #172033;
-}
-QTabBar::tab:selected {
-    background: #ffffff;
-    border-bottom: 2px solid #2563eb;
-}
-QGroupBox {
-    background: #ffffff;
-}
-QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox, QTableWidget {
-    background: #ffffff;
-    color: #172033;
-}
-QPushButton {
-    background: #ffffff;
-    color: #172033;
-}
-QPushButton:pressed {
-    background: #e5e7eb;
+    background: #1d2a3a;
 }
 """
 )

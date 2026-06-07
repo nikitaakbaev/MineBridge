@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -16,7 +15,6 @@ from PySide6.QtWidgets import (
 
 from minebridge_frp.app.core.app_context import AppContext
 from minebridge_frp.app.ui.layouts import scroll_panel
-from minebridge_frp.app.ui.theme import apply_theme
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
 
 
@@ -33,10 +31,6 @@ class SettingsTab(QWidget):
 
         self.profile_path = QLineEdit(str(context.config_dir))
         self.profile_path.setReadOnly(True)
-
-        self.theme = QComboBox()
-        self.theme.addItems(["system", "light", "dark"])
-        self.theme.setCurrentText(str(self.settings.value("theme", "system")))
 
         self.language = QComboBox()
         self.language.addItem("ru")
@@ -64,7 +58,6 @@ class SettingsTab(QWidget):
         form.addRow("Путь хранения FRP", self.frp_path)
         form.addRow("Путь хранения профилей", self.profile_path)
         form.addRow("Автообновление FRP", self.auto_update)
-        form.addRow("Тема интерфейса", self.theme)
         form.addRow("Язык", self.language)
         form.addRow("Таймаут диагностики, сек", self.timeout)
         form.addRow("При закрытии приложения", self.close_behavior)
@@ -78,7 +71,6 @@ class SettingsTab(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(scroll_panel(panel))
 
-        self.theme.currentTextChanged.connect(self._save_theme)
         self.close_behavior.currentTextChanged.connect(
             lambda value: self.settings.setValue("close_behavior", value)
         )
@@ -91,13 +83,3 @@ class SettingsTab(QWidget):
         self.frp_path.input.textChanged.connect(
             lambda value: self.settings.setValue("frp_path", value)
         )
-
-    def _save_theme(self, theme: str) -> None:
-        self.settings.setValue("theme", theme)
-        self._apply_theme(theme)
-
-    def _apply_theme(self, theme: str) -> None:
-        app = QApplication.instance()
-        if app is None:
-            return
-        apply_theme(app, theme)

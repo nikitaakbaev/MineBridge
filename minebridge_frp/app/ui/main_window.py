@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
             icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
         self.setWindowIcon(icon)
         self._restore_window_state()
-        self._apply_saved_theme()
+        self._apply_theme()
         self.tray_icon = self._create_tray_icon()
 
         tabs = QTabWidget()
@@ -130,9 +130,8 @@ class MainWindow(QMainWindow):
         if window_state:
             self.restoreState(window_state)
 
-    def _apply_saved_theme(self) -> None:
-        theme = self.settings.value("theme", "system")
+    def _apply_theme(self) -> None:
         app = QApplication.instance()
         if app is None:
             return
-        apply_theme(app, str(theme))
+        apply_theme(app)

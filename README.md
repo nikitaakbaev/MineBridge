@@ -4,6 +4,11 @@ MineBridge FRP is a desktop GUI app for running a Minecraft server on the user's
 
 ## Current Stage
 
+Electron migration stage 1 is documented in
+[`docs/electron-migration-stage-1.md`](docs/electron-migration-stage-1.md). It maps the
+current PySide6 UI, services, models, dependencies, and the planned FastAPI + WebSocket
+bridge for the future Electron frontend.
+
 Stage 1 is implemented:
 
 - project skeleton;

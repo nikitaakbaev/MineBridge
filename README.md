@@ -13,6 +13,10 @@ Electron migration stages 2-3 are documented in
 [`docs/electron-migration-stage-2-3.md`](docs/electron-migration-stage-2-3.md). They add a
 UI-neutral process runner and the first local FastAPI backend for Electron.
 
+Electron migration stages 4-5 are documented in
+[`docs/electron-migration-stage-4-5.md`](docs/electron-migration-stage-4-5.md). They add
+the Electron/Vite/React shell and the first migrated launcher screens.
+
 Stage 1 is implemented:
 
 - project skeleton;

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, Menu } = require("electron");
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 
@@ -34,6 +34,8 @@ function startBackend() {
 }
 
 function createWindow() {
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,

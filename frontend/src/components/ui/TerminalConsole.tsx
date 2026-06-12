@@ -27,13 +27,18 @@ export function TerminalConsole({ lines, title }: TerminalConsoleProps) {
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(hostRef.current);
-    fit.fit();
     terminalRef.current = terminal;
+    window.requestAnimationFrame(() => fit.fit());
 
-    const observer = new ResizeObserver(() => fit.fit());
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => fit.fit());
+    });
     observer.observe(hostRef.current);
 
     return () => {
+      window.cancelAnimationFrame(frame);
       observer.disconnect();
       terminal.dispose();
       terminalRef.current = null;

@@ -34,7 +34,7 @@ from minebridge_frp.app.ui.layouts import (
     scroll_panel,
 )
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
-from minebridge_frp.app.ui.workers import run_in_thread
+from minebridge_frp.app.ui.workers import GuiStringBridge, run_in_thread
 
 
 class FrpcTab(QWidget):
@@ -45,9 +45,12 @@ class FrpcTab(QWidget):
         self.context = context
         self.profile_service = profile_service
         self.manager = FrpManager(context.data_dir / "frp")
-        self.manager.log_line.connect(self._append_log)
-        self.manager.status_changed.connect(self._on_status_changed)
-        self.manager.error.connect(self._show_error)
+        self._log_bridge = GuiStringBridge(self._append_log)
+        self._status_bridge = GuiStringBridge(self._on_status_changed)
+        self._error_bridge = GuiStringBridge(self._show_error)
+        self.manager.log_line.connect(self._log_bridge.emit)
+        self.manager.status_changed.connect(self._status_bridge.emit)
+        self.manager.error.connect(self._error_bridge.emit)
         self._threads = []
         self._profile_loading = False
 

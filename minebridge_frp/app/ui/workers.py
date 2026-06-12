@@ -48,6 +48,19 @@ class CallbackDispatcher(QObject):
         self.deleteLater()
 
 
+class GuiStringBridge(QObject):
+    """Bridge a service string callback back into the Qt GUI thread."""
+
+    value = Signal(str)
+
+    def __init__(self, receiver: Callable[[str], None]) -> None:
+        super().__init__()
+        self.value.connect(receiver, Qt.ConnectionType.QueuedConnection)
+
+    def emit(self, value: str) -> None:
+        self.value.emit(value)
+
+
 def run_in_thread(
     function: Callable[[], Any],
     on_finished: Callable[[Any], None],

@@ -9,6 +9,10 @@ Electron migration stage 1 is documented in
 current PySide6 UI, services, models, dependencies, and the planned FastAPI + WebSocket
 bridge for the future Electron frontend.
 
+Electron migration stages 2-3 are documented in
+[`docs/electron-migration-stage-2-3.md`](docs/electron-migration-stage-2-3.md). They add a
+UI-neutral process runner and the first local FastAPI backend for Electron.
+
 Stage 1 is implemented:
 
 - project skeleton;

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -34,6 +35,7 @@ from minebridge_frp.app.ui.layouts import (
 from minebridge_frp.app.ui.widgets.console_input import ConsoleInput
 from minebridge_frp.app.ui.widgets.log_viewer import LogViewer
 from minebridge_frp.app.ui.widgets.path_picker import PathPicker
+from minebridge_frp.app.ui.workers import GuiStringBridge
 
 
 class MinecraftTab(QWidget):
@@ -46,9 +48,12 @@ class MinecraftTab(QWidget):
         self.profile_service = profile_service
         self.manager = MinecraftManager()
         self._profile_loading = False
-        self.manager.log_line.connect(self._append_log)
-        self.manager.status_changed.connect(self._on_status_changed)
-        self.manager.error.connect(self._show_error)
+        self._log_bridge = GuiStringBridge(self._append_log)
+        self._status_bridge = GuiStringBridge(self._on_status_changed)
+        self._error_bridge = GuiStringBridge(self._show_error)
+        self.manager.log_line.connect(self._log_bridge.emit)
+        self.manager.status_changed.connect(self._status_bridge.emit)
+        self.manager.error.connect(self._error_bridge.emit)
 
         self.profile_select = QComboBox()
         self.profile_select.setMinimumWidth(260)
@@ -339,6 +344,7 @@ class MinecraftTab(QWidget):
             QMessageBox.warning(self, "EULA", "Сначала выберите папку сервера.")
             return
         path = self.manager.open_eula(server_dir)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         self._append_log(f"Открыт EULA файл: {path}")
 
     def _save_server_properties(self) -> None:
@@ -383,7 +389,8 @@ class MinecraftTab(QWidget):
             self._append_log("EULA Minecraft принята по явному подтверждению пользователя.")
             return
         if self.auto_open_eula.isChecked():
-            self.manager.open_eula(server_dir)
+            path = self.manager.open_eula(server_dir)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         raise ConfigurationError(
             "EULA Minecraft не принята. Отметьте чекбокс согласия или откройте eula.txt."
         )
@@ -407,8 +414,7 @@ class MinecraftTab(QWidget):
             QMessageBox.warning(self, "Minecraft", str(exc))
 
     def _offer_kill_if_still_running(self) -> None:
-        process = self.manager.process
-        if not process or process.state() == QProcess.ProcessState.NotRunning:
+        if not self.manager.process.is_running:
             return
         answer = QMessageBox.question(
             self,

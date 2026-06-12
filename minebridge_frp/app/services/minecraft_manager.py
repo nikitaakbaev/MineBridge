@@ -6,11 +6,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QProcess, QUrl, Signal
-from PySide6.QtGui import QDesktopServices
-
 from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
 from minebridge_frp.app.models.minecraft import MinecraftConfig
+from minebridge_frp.app.services.events import CallbackSignal
+from minebridge_frp.app.services.process_runner import ProcessRunner
 from minebridge_frp.app.utils.ports import wait_until_port_open
 
 
@@ -37,16 +36,18 @@ def format_server_properties(properties: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-class MinecraftManager(QObject):
+class MinecraftManager:
     """Manage a local Minecraft server process."""
 
-    log_line = Signal(str)
-    status_changed = Signal(str)
-    error = Signal(str)
-
     def __init__(self) -> None:
-        super().__init__()
-        self.process: QProcess | None = None
+        self.log_line = CallbackSignal[[str]]()
+        self.status_changed = CallbackSignal[[str]]()
+        self.error = CallbackSignal[[str]]()
+        self.process = ProcessRunner()
+        self.process.output.connect(self.log_line.emit)
+        self.process.started.connect(lambda: self.status_changed.emit("running"))
+        self.process.finished.connect(lambda _code: self.status_changed.emit("stopped"))
+        self.process.error.connect(self.error.emit)
 
     def find_java(self) -> str | None:
         """Find java executable in PATH."""
@@ -101,7 +102,6 @@ class MinecraftManager(QObject):
         path = self.eula_path(server_dir)
         if not path.exists():
             path.write_text("eula=false\n", encoding="utf-8")
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         return path
 
     def accept_eula_after_user_confirm(self, server_dir: Path) -> Path:
@@ -111,8 +111,8 @@ class MinecraftManager(QObject):
         return path
 
     def start_server(self, config: MinecraftConfig) -> None:
-        """Start Minecraft server via QProcess."""
-        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+        """Start Minecraft server."""
+        if self.process.is_running:
             raise ServiceError("Minecraft-сервер уже запущен.")
 
         server_dir = Path(config.server_dir)
@@ -130,47 +130,29 @@ class MinecraftManager(QObject):
                 "EULA Minecraft не принята. Откройте eula.txt и подтвердите EULA."
             )
 
-        process = QProcess(self)
-        process.setProgram(java_path)
-        process.setArguments(
-            [f"-Xms{config.xms}", f"-Xmx{config.xmx}", "-jar", str(jar_path), "nogui"]
+        self.process.start(
+            java_path,
+            [f"-Xms{config.xms}", f"-Xmx{config.xmx}", "-jar", str(jar_path), "nogui"],
+            working_directory=server_dir,
         )
-        process.setWorkingDirectory(str(server_dir))
-        process.setProcessChannelMode(QProcess.MergedChannels)
-        process.readyReadStandardOutput.connect(self._read_output)
-        process.started.connect(lambda: self.status_changed.emit("running"))
-        process.errorOccurred.connect(lambda error: self.error.emit(f"QProcess error: {error}"))
-        process.finished.connect(lambda _code, _status: self.status_changed.emit("stopped"))
-
-        self.process = process
-        process.start()
-        if not process.waitForStarted(5000):
-            raise ServiceError("Не удалось запустить Minecraft-сервер.")
 
     def stop_server_gracefully(self) -> None:
         """Send the Minecraft stop command."""
-        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
+        if not self.process.is_running:
             self.status_changed.emit("stopped")
             return
         self.send_command("stop")
         self.status_changed.emit("stopping")
 
     def kill_server(self) -> None:
-        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+        if self.process.is_running:
             self.process.kill()
             self.status_changed.emit("killed")
 
     def send_command(self, command: str) -> None:
-        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
+        if not self.process.is_running:
             raise ServiceError("Minecraft-сервер не запущен.")
-        self.process.write(f"{command.strip()}\n".encode())
+        self.process.send_line(command.strip())
 
     def wait_until_port_open(self, port: int, timeout_seconds: float = 30.0) -> bool:
         return wait_until_port_open("127.0.0.1", port, timeout_seconds=timeout_seconds)
-
-    def _read_output(self) -> None:
-        if not self.process:
-            return
-        data = bytes(self.process.readAllStandardOutput()).decode("utf-8", errors="replace")
-        for line in data.splitlines():
-            self.log_line.emit(line)

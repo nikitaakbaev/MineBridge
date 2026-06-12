@@ -22,6 +22,8 @@ dependencies = [
   "psutil>=5.9",
   "requests>=2.32",
   "platformdirs>=4.2",
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +37,7 @@ packaging = [
 
 [project.scripts]
 minebridge-frp = "minebridge_frp.app.main:main"
+minebridge-frp-api = "minebridge_frp.app.api.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["minebridge_frp"]

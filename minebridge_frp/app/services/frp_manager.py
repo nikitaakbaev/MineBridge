@@ -5,11 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import tomlkit
-from PySide6.QtCore import QObject, QProcess, Signal
 
 from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
 from minebridge_frp.app.models.tunnel import TunnelConfig
 from minebridge_frp.app.services.download_service import DownloadService
+from minebridge_frp.app.services.events import CallbackSignal
+from minebridge_frp.app.services.process_runner import ProcessRunner
 from minebridge_frp.app.utils.os_detect import detect_platform
 from minebridge_frp.app.utils.ports import is_port_open
 from minebridge_frp.app.utils.secrets import generate_token
@@ -67,19 +68,21 @@ def create_frpc_toml(config: TunnelConfig) -> str:
     return tomlkit.dumps(document)
 
 
-class FrpManager(QObject):
+class FrpManager:
     """Manage local frpc configuration, download, and process lifecycle."""
 
-    log_line = Signal(str)
-    status_changed = Signal(str)
-    error = Signal(str)
-
     def __init__(self, storage_dir: Path) -> None:
-        super().__init__()
         self.storage_dir = storage_dir
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.download_service = DownloadService(storage_dir)
-        self.process: QProcess | None = None
+        self.log_line = CallbackSignal[[str]]()
+        self.status_changed = CallbackSignal[[str]]()
+        self.error = CallbackSignal[[str]]()
+        self.process = ProcessRunner()
+        self.process.output.connect(self.log_line.emit)
+        self.process.started.connect(lambda: self.status_changed.emit("running"))
+        self.process.finished.connect(lambda _code: self.status_changed.emit("stopped"))
+        self.process.error.connect(self.error.emit)
 
     def generate_token(self) -> str:
         return generate_token()
@@ -106,7 +109,7 @@ class FrpManager(QObject):
         return candidates[-1] if candidates else None
 
     def start_frpc(self, config_path: Path, binary_path: Path | None = None) -> None:
-        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
+        if self.process.is_running:
             raise ServiceError("frpc уже запущен.")
 
         binary = binary_path or self.find_frpc_binary()
@@ -115,28 +118,13 @@ class FrpManager(QObject):
         if not config_path.exists():
             raise ConfigurationError("frpc.toml не найден. Сначала создайте конфиг.")
 
-        process = QProcess(self)
-        process.setProgram(str(binary))
-        process.setArguments(["-c", str(config_path)])
-        process.setWorkingDirectory(str(config_path.parent))
-        process.setProcessChannelMode(QProcess.MergedChannels)
-        process.readyReadStandardOutput.connect(self._read_output)
-        process.started.connect(lambda: self.status_changed.emit("running"))
-        process.errorOccurred.connect(lambda error: self.error.emit(f"QProcess error: {error}"))
-        process.finished.connect(lambda _code, _status: self.status_changed.emit("stopped"))
-
-        self.process = process
-        process.start()
-        if not process.waitForStarted(5000):
-            raise ServiceError("Не удалось запустить frpc.")
+        self.process.start(binary, ["-c", str(config_path)], working_directory=config_path.parent)
 
     def stop_frpc(self) -> None:
-        if not self.process or self.process.state() == QProcess.ProcessState.NotRunning:
+        if not self.process.is_running:
             self.status_changed.emit("stopped")
             return
-        self.process.terminate()
-        if not self.process.waitForFinished(3000):
-            self.process.kill()
+        self.process.terminate(timeout_seconds=3.0)
         self.status_changed.emit("stopped")
 
     def check_external_port(self, host: str, port: int) -> bool:
@@ -147,10 +135,3 @@ class FrpManager(QObject):
             raise ConfigurationError("Укажите адрес FRP/VPS сервера.")
         if not config.frp_token:
             raise ConfigurationError("Сгенерируйте или укажите FRP token.")
-
-    def _read_output(self) -> None:
-        if not self.process:
-            return
-        data = bytes(self.process.readAllStandardOutput()).decode("utf-8", errors="replace")
-        for line in data.splitlines():
-            self.log_line.emit(line)

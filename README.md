@@ -17,6 +17,10 @@ Electron migration stages 4-5 are documented in
 [`docs/electron-migration-stage-4-5.md`](docs/electron-migration-stage-4-5.md). They add
 the Electron/Vite/React shell and the first migrated launcher screens.
 
+Electron migration stage 6 is documented in
+[`docs/electron-migration-stage-6.md`](docs/electron-migration-stage-6.md). The Electron
+UI is now the primary launch path; the old PySide6 UI remains as an explicit fallback.
+
 Stage 1 is implemented:
 
 - project skeleton;
@@ -112,6 +116,7 @@ Stage 10 is implemented:
 ## Requirements
 
 - Python 3.11+
+- Node.js + npm for the Electron UI development checkout
 - Windows 10/11 or Linux x86_64
 
 ## Install For Development
@@ -120,6 +125,7 @@ Stage 10 is implemented:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+npm install
 ```
 
 On Windows PowerShell:
@@ -128,18 +134,27 @@ On Windows PowerShell:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
+npm install
 ```
 
 ## Run
 
 ```bash
-python -m minebridge_frp.app.main
+minebridge-frp
 ```
 
-or, after installation:
+This starts the Electron UI. Electron starts the Python FastAPI backend automatically.
+
+Backend-only mode:
 
 ```bash
-minebridge-frp
+minebridge-frp-api
+```
+
+Temporary old PySide6 fallback:
+
+```bash
+minebridge-frp-qt
 ```
 
 ## Desktop Launcher
@@ -150,7 +165,7 @@ On Linux, install the app menu launcher:
 scripts/install_desktop_launcher.sh
 ```
 
-It creates `MineBridge FRP` in the application menu and uses the project `.venv` through `scripts/run_minebridge_frp.sh`, so the app can be opened without typing a run command.
+It creates `MineBridge FRP` in the application menu and uses the project `.venv` through `scripts/run_minebridge_frp.sh`, so the Electron app can be opened without typing a run command.
 
 ## Test
 

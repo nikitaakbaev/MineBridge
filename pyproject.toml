@@ -36,7 +36,8 @@ packaging = [
 ]
 
 [project.scripts]
-minebridge-frp = "minebridge_frp.app.main:main"
+minebridge-frp = "minebridge_frp.app.electron_launcher:main"
+minebridge-frp-qt = "minebridge_frp.app.main:main"
 minebridge-frp-api = "minebridge_frp.app.api.main:main"
 
 [tool.hatch.build.targets.wheel]

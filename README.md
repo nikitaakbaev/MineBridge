@@ -19,14 +19,18 @@ the Electron/Vite/React shell and the first migrated launcher screens.
 
 Electron migration stage 6 is documented in
 [`docs/electron-migration-stage-6.md`](docs/electron-migration-stage-6.md). The Electron
-UI is now the primary launch path; the old PySide6 UI remains as an explicit fallback.
+UI became the primary launch path.
+
+Electron migration stage 7 is documented in
+[`docs/electron-migration-stage-7.md`](docs/electron-migration-stage-7.md). The old
+PySide6 interface has been removed; Python now remains as the backend for the Electron UI.
 
 Stage 1 is implemented:
 
 - project skeleton;
 - Python packaging config;
-- PySide6 application entry point;
-- main window with the required tabs;
+- Electron application entry point;
+- React launcher with the required screens;
 - basic application logger;
 - placeholder widgets and tabs for later stages.
 
@@ -47,7 +51,7 @@ Stage 3 is implemented:
 - server folder and server.jar selection;
 - server.properties read/write helpers;
 - explicit EULA handling without silent acceptance;
-- local Minecraft server start/stop/restart through QProcess;
+- local Minecraft server start/stop/restart through a Python subprocess runner;
 - realtime Minecraft log output and stdin command console.
 
 Stage 4 is implemented:
@@ -56,7 +60,7 @@ Stage 4 is implemented:
 - frpc.toml generation with tomlkit;
 - current OS/architecture detection for FRP assets;
 - FRP download and archive extraction helpers;
-- local frpc start/stop through QProcess;
+- local frpc start/stop through a Python subprocess runner;
 - realtime frpc logs and external port checks.
 
 Stage 5 is implemented:
@@ -71,12 +75,12 @@ Stage 5 is implemented:
 - ufw/firewalld port opening without disabling the firewall;
 - full remote frps installation flow for Linux amd64 VPS hosts.
 
-Stage 6 is implemented as separate manual workflow tabs:
+Stage 6 is implemented as Electron workflow screens:
 
-- VPS tab manages SSH, remote frps install/config/systemd/firewall;
-- Minecraft tab manages the local server folder, server.properties, EULA, and Java process;
-- frpc tab manages the local frpc working folder, frpc.toml, binary download, launch, logs, and external port checks;
-- VPS, Minecraft, and frpc tabs have separate profile selectors;
+- VPS screen manages SSH, remote frps install/config/systemd/firewall;
+- Minecraft screen manages the local server folder, server.properties, EULA, and Java process;
+- Tunnels screen manages the local frpc working folder, frpc.toml, binary download, launch, logs, and external port checks;
+- VPS, Minecraft, and frpc screens have separate profile selectors;
 - the old all-in-one Quick Start tab has been removed to keep each action explicit.
 
 Stage 7 is implemented:
@@ -90,11 +94,8 @@ Stage 7 is implemented:
 Stage 8 is implemented:
 
 - status badges are used in runtime and diagnostics views;
-- window geometry/state are saved and restored;
-- the interface uses a permanent dark theme;
-- close behavior is persisted through QSettings;
-- close behavior supports ask, tray minimize, stop-all, and leave-running modes;
-- tray icon is enabled when the platform provides a system tray.
+- the Electron interface uses a permanent dark launcher theme;
+- Electron main process owns desktop window lifecycle and single-instance behavior.
 
 Stage 9 is implemented:
 
@@ -108,10 +109,9 @@ Stage 9 is implemented:
 
 Stage 10 is implemented:
 
-- PyInstaller spec is provided in `packaging/minebridge-frp.spec`;
-- Linux portable one-folder build script is provided in `scripts/build_linux.sh`;
-- Windows build script is provided in `scripts/build_windows.ps1`;
-- builds include application code only and do not bundle profile databases, FRP runtime downloads, `.env` files, or secrets.
+- renderer build is provided through `npm run build`;
+- Python backend remains packageable through the Python project metadata;
+- builds must not bundle profile databases, FRP runtime downloads, `.env` files, or secrets.
 
 ## Requirements
 
@@ -151,12 +151,6 @@ Backend-only mode:
 minebridge-frp-api
 ```
 
-Temporary old PySide6 fallback:
-
-```bash
-minebridge-frp-qt
-```
-
 ## Desktop Launcher
 
 On Linux, install the app menu launcher:
@@ -175,36 +169,16 @@ ruff check .
 pytest
 ```
 
-## Build With PyInstaller
-
-Install packaging dependencies:
+## Build Electron Renderer
 
 ```bash
-pip install -e ".[packaging]"
+npm run build
 ```
 
-Linux portable folder:
-
-```bash
-scripts/build_linux.sh
-```
-
-The output folder is:
+The renderer output folder is:
 
 ```text
-dist/MineBridge FRP
-```
-
-Windows executable folder from PowerShell:
-
-```powershell
-.\scripts\build_windows.ps1
-```
-
-The output executable is:
-
-```text
-dist\MineBridge FRP\MineBridge FRP.exe
+dist-electron/renderer
 ```
 
 Do not copy local runtime data into release builds. In particular, keep `.minebridge-frp/`, profile exports, SQLite databases, `.env` files, downloaded FRP archives/binaries, SSH keys, and passwords outside distributable artifacts.

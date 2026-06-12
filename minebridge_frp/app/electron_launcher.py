@@ -10,11 +10,6 @@ from pathlib import Path
 
 def main() -> int:
     """Start the Electron launcher in development mode."""
-    if os.environ.get("MINEBRIDGE_USE_QT") == "1":
-        from minebridge_frp.app.main import main as qt_main
-
-        return qt_main()
-
     project_root = _project_root()
     missing = _missing_frontend_files(project_root)
     if missing:
@@ -31,7 +26,6 @@ def main() -> int:
         print("MineBridge now uses the Electron UI as the primary interface.", flush=True)
         print("Node.js and npm are required to start it in the development checkout.", flush=True)
         print("Install Node.js, run `npm install`, then run `minebridge-frp` again.", flush=True)
-        print("Temporary Qt fallback: MINEBRIDGE_USE_QT=1 minebridge-frp", flush=True)
         return 1
 
     return subprocess.call([npm, "run", "dev"], cwd=project_root, env=_electron_env())

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CloudCog, Play, Save, ShieldCheck, Square } from "lucide-react";
+import { CloudCog, FileCode2, Flame, Play, RotateCw, Save, ShieldCheck, Square } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { VpsConfig } from "../lib/types";
@@ -17,6 +17,7 @@ export function VpsScreen() {
   const active = useQuery({ queryKey: ["vps-profile-active"], queryFn: api.activeVpsProfile });
   const [config, setConfig] = useState<VpsConfig | null>(null);
   const [password, setPassword] = useState("");
+  const [actionLines, setActionLines] = useState<string[]>([]);
   const logs = useAppStore((state) => state.vpsLogs);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function VpsScreen() {
   const save = useMutation({
     mutationFn: () => {
       if (!active.data?.profile.id || !config) throw new Error("VPS-профиль не выбран.");
-      return api.saveVpsProfile(active.data.profile.id, config);
+      return api.saveVpsProfile(active.data.profile.id, config, password);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vps-profile-active"] });
@@ -39,7 +40,29 @@ export function VpsScreen() {
   const status = useMutation({ mutationFn: () => api.frpsStatus(password) });
   const start = useMutation({ mutationFn: () => api.startFrps(password) });
   const stop = useMutation({ mutationFn: () => api.stopFrps(password) });
+  const restart = useMutation({ mutationFn: () => api.restartFrps(password) });
+  const configFile = useMutation({ mutationFn: () => api.createFrpsConfig(password) });
+  const firewall = useMutation({ mutationFn: () => api.openFirewall(password) });
 
+  const runCommand = (
+    title: string,
+    action: () => Promise<{ stdout?: string; stderr?: string; message?: string }>
+  ) => {
+    setActionLines((lines) => [...lines, `${title}...`]);
+    action()
+      .then((result) => {
+        const output = [result.message, result.stdout, result.stderr].filter(Boolean).join("\n");
+        setActionLines((lines) => [...lines, output || "Готово."]);
+      })
+      .catch((error: Error) => setActionLines((lines) => [...lines, `Ошибка: ${error.message}`]));
+  };
+
+  if (active.isError)
+    return (
+      <div className="screen">
+        Не удалось подключиться к бэкенду: {(active.error as Error).message}
+      </div>
+    );
   if (!config) return <div className="screen">Загрузка VPS-профиля...</div>;
 
   return (
@@ -58,6 +81,8 @@ export function VpsScreen() {
         getActiveProfile={api.activeVpsProfile}
         createProfile={api.createVpsProfile}
         setActiveProfile={api.setActiveVpsProfile}
+        renameProfile={api.renameVpsProfile}
+        deleteProfile={api.deleteVpsProfile}
       />
 
       <div className="two-columns wide-left">
@@ -101,19 +126,59 @@ export function VpsScreen() {
             <Button icon={<Save size={16} />} onClick={() => save.mutate()}>
               Сохранить
             </Button>
-            <Button icon={<ShieldCheck size={16} />} onClick={() => ssh.mutate()}>
+            <Button
+              icon={<ShieldCheck size={16} />}
+              onClick={() => runCommand("Проверка SSH", () => ssh.mutateAsync())}
+              disabled={ssh.isPending}
+            >
               Проверить SSH
             </Button>
-            <Button icon={<CloudCog size={16} />} onClick={() => install.mutate()}>
+            <Button
+              icon={<CloudCog size={16} />}
+              onClick={() => runCommand("Установка frps", () => install.mutateAsync())}
+              disabled={install.isPending}
+            >
               Установить frps
             </Button>
-            <Button variant="primary" icon={<Play size={16} />} onClick={() => start.mutate()}>
+            <Button
+              icon={<FileCode2 size={16} />}
+              onClick={() => runCommand("Создание frps.toml", () => configFile.mutateAsync())}
+              disabled={configFile.isPending}
+            >
+              frps.toml
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Play size={16} />}
+              onClick={() => runCommand("Запуск frps", () => start.mutateAsync())}
+              disabled={start.isPending}
+            >
               Запустить
             </Button>
-            <Button icon={<Square size={16} />} onClick={() => stop.mutate()}>
+            <Button
+              icon={<Square size={16} />}
+              onClick={() => runCommand("Остановка frps", () => stop.mutateAsync())}
+              disabled={stop.isPending}
+            >
               Остановить
             </Button>
-            <Button onClick={() => status.mutate()}>Статус</Button>
+            <Button
+              icon={<RotateCw size={16} />}
+              onClick={() => runCommand("Перезапуск frps", () => restart.mutateAsync())}
+              disabled={restart.isPending}
+            >
+              Перезапустить
+            </Button>
+            <Button
+              icon={<Flame size={16} />}
+              onClick={() => runCommand("Открытие firewall", () => firewall.mutateAsync())}
+              disabled={firewall.isPending}
+            >
+              Firewall
+            </Button>
+            <Button onClick={() => runCommand("Статус frps", () => status.mutateAsync())} disabled={status.isPending}>
+              Статус
+            </Button>
           </div>
         </Card>
 
@@ -121,6 +186,7 @@ export function VpsScreen() {
           title="VPS output"
           lines={[
             ...logs,
+            ...actionLines,
             ssh.data?.stdout || "",
             status.data?.stdout || "",
             install.data?.message || ""

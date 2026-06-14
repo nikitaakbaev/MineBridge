@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tomllib
 from pathlib import Path
 
@@ -39,6 +40,7 @@ def test_electron_launcher_cleans_electron_node_environment(monkeypatch):
 
     assert "ELECTRON_RUN_AS_NODE" not in env
     assert "ELECTRON_NO_ATTACH_CONSOLE" not in env
+    assert env["PYTHON"] == sys.executable
 
 
 def test_qt_ui_files_are_removed():

@@ -42,10 +42,10 @@ export const api = {
 
   vpsProfiles: () => request<Profile[]>("/api/profiles/vps"),
   activeVpsProfile: () => request<SectionProfileBundle<VpsConfig>>("/api/profiles/vps/active"),
-  saveVpsProfile: (id: number, config: VpsConfig) =>
+  saveVpsProfile: (id: number, config: VpsConfig, password = "") =>
     request<SectionProfileBundle<VpsConfig>>(`/api/profiles/vps/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ config })
+      body: JSON.stringify({ config, password })
     }),
   createVpsProfile: (name: string) =>
     request<SectionProfileBundle<VpsConfig>>("/api/profiles/vps", {
@@ -55,6 +55,15 @@ export const api = {
   setActiveVpsProfile: (id: number) =>
     request<SectionProfileBundle<VpsConfig>>(`/api/profiles/vps/${id}/active`, {
       method: "POST"
+    }),
+  renameVpsProfile: (id: number, name: string) =>
+    request<SectionProfileBundle<VpsConfig>>(`/api/profiles/vps/${id}/name`, {
+      method: "PATCH",
+      body: JSON.stringify({ name })
+    }),
+  deleteVpsProfile: (id: number) =>
+    request<SectionProfileBundle<VpsConfig>>(`/api/profiles/vps/${id}`, {
+      method: "DELETE"
     }),
 
   minecraftProfiles: () => request<Profile[]>("/api/profiles/minecraft"),
@@ -74,6 +83,15 @@ export const api = {
     request<SectionProfileBundle<MinecraftConfig>>(`/api/profiles/minecraft/${id}/active`, {
       method: "POST"
     }),
+  renameMinecraftProfile: (id: number, name: string) =>
+    request<SectionProfileBundle<MinecraftConfig>>(`/api/profiles/minecraft/${id}/name`, {
+      method: "PATCH",
+      body: JSON.stringify({ name })
+    }),
+  deleteMinecraftProfile: (id: number) =>
+    request<SectionProfileBundle<MinecraftConfig>>(`/api/profiles/minecraft/${id}`, {
+      method: "DELETE"
+    }),
 
   tunnelProfiles: () => request<Profile[]>("/api/profiles/tunnels"),
   activeTunnelProfile: () =>
@@ -91,6 +109,15 @@ export const api = {
   setActiveTunnelProfile: (id: number) =>
     request<SectionProfileBundle<TunnelConfig>>(`/api/profiles/tunnels/${id}/active`, {
       method: "POST"
+    }),
+  renameTunnelProfile: (id: number, name: string) =>
+    request<SectionProfileBundle<TunnelConfig>>(`/api/profiles/tunnels/${id}/name`, {
+      method: "PATCH",
+      body: JSON.stringify({ name })
+    }),
+  deleteTunnelProfile: (id: number) =>
+    request<SectionProfileBundle<TunnelConfig>>(`/api/profiles/tunnels/${id}`, {
+      method: "DELETE"
     }),
 
   checkSsh: (password = "") =>
@@ -118,9 +145,25 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ password })
     }),
+  restartFrps: (password = "") =>
+    request<CommandOutput>("/api/vps/frps/restart", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    }),
+  createFrpsConfig: (password = "") =>
+    request<ApiMessage>("/api/vps/frps/config", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    }),
+  openFirewall: (password = "") =>
+    request<ApiMessage>("/api/vps/firewall/open", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    }),
 
   saveServerProperties: () =>
     request<ApiMessage>("/api/minecraft/server-properties", { method: "POST" }),
+  createEulaFile: () => request<ApiMessage>("/api/minecraft/eula", { method: "POST" }),
   startMinecraft: () => request<ApiMessage>("/api/minecraft/start", { method: "POST" }),
   stopMinecraft: () => request<ApiMessage>("/api/minecraft/stop", { method: "POST" }),
   restartMinecraft: () => request<ApiMessage>("/api/minecraft/restart", { method: "POST" }),
@@ -131,6 +174,7 @@ export const api = {
     }),
 
   createFrpcConfig: () => request<ApiMessage>("/api/frpc/config", { method: "POST" }),
+  generateFrpToken: () => request<ApiMessage>("/api/frpc/token", { method: "POST" }),
   downloadFrpc: () => request<ApiMessage>("/api/frpc/download", { method: "POST" }),
   startFrpc: () => request<ApiMessage>("/api/frpc/start", { method: "POST" }),
   stopFrpc: () => request<ApiMessage>("/api/frpc/stop", { method: "POST" }),

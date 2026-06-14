@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -49,6 +50,8 @@ def _electron_env() -> dict[str, str]:
     env = os.environ.copy()
     env.pop("ELECTRON_RUN_AS_NODE", None)
     env.pop("ELECTRON_NO_ATTACH_CONSOLE", None)
+    env["PYTHON"] = sys.executable
+    env["MINEBRIDGE_PROJECT_ROOT"] = str(_project_root())
     return env
 
 

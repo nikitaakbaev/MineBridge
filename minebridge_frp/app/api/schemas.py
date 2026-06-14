@@ -37,6 +37,7 @@ class VpsActionRequest(BaseModel):
 
 class SaveVpsProfileRequest(BaseModel):
     config: VpsConfig
+    password: str = ""
 
 
 class SaveMinecraftProfileRequest(BaseModel):

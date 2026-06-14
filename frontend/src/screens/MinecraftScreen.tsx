@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, Save, Send, Square } from "lucide-react";
+import { FileCheck2, FileCode2, Play, Save, Send, Square } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { MinecraftConfig } from "../lib/types";
@@ -20,6 +20,7 @@ export function MinecraftScreen() {
   });
   const [config, setConfig] = useState<MinecraftConfig | null>(null);
   const [command, setCommand] = useState("");
+  const [actionLines, setActionLines] = useState<string[]>([]);
   const logs = useAppStore((state) => state.minecraftLogs);
 
   useEffect(() => {
@@ -39,11 +40,26 @@ export function MinecraftScreen() {
 
   const start = useMutation({ mutationFn: api.startMinecraft });
   const stop = useMutation({ mutationFn: api.stopMinecraft });
+  const serverProperties = useMutation({ mutationFn: api.saveServerProperties });
+  const eula = useMutation({ mutationFn: api.createEulaFile });
   const send = useMutation({
     mutationFn: () => api.sendMinecraftCommand(command),
     onSuccess: () => setCommand("")
   });
 
+  const runAction = (title: string, action: () => Promise<{ message: string }>) => {
+    setActionLines((lines) => [...lines, `${title}...`]);
+    action()
+      .then((result) => setActionLines((lines) => [...lines, result.message]))
+      .catch((error: Error) => setActionLines((lines) => [...lines, `Ошибка: ${error.message}`]));
+  };
+
+  if (active.isError)
+    return (
+      <div className="screen">
+        Не удалось подключиться к бэкенду: {(active.error as Error).message}
+      </div>
+    );
   if (!config) return <div className="screen">Загрузка Minecraft-профиля...</div>;
 
   return (
@@ -62,6 +78,8 @@ export function MinecraftScreen() {
         getActiveProfile={api.activeMinecraftProfile}
         createProfile={api.createMinecraftProfile}
         setActiveProfile={api.setActiveMinecraftProfile}
+        renameProfile={api.renameMinecraftProfile}
+        deleteProfile={api.deleteMinecraftProfile}
       />
 
       <div className="two-columns wide-left">
@@ -120,6 +138,20 @@ export function MinecraftScreen() {
             <Button icon={<Save size={16} />} onClick={() => save.mutate()} disabled={save.isPending}>
               Сохранить
             </Button>
+            <Button
+              icon={<FileCode2 size={16} />}
+              onClick={() => runAction("Запись server.properties", () => serverProperties.mutateAsync())}
+              disabled={serverProperties.isPending}
+            >
+              server.properties
+            </Button>
+            <Button
+              icon={<FileCheck2 size={16} />}
+              onClick={() => runAction("Создание eula.txt", () => eula.mutateAsync())}
+              disabled={eula.isPending}
+            >
+              eula.txt
+            </Button>
             <Button variant="primary" icon={<Play size={16} />} onClick={() => start.mutate()}>
               Запустить
             </Button>
@@ -144,6 +176,7 @@ export function MinecraftScreen() {
             </Button>
           </div>
           <TerminalConsole title="Minecraft logs" lines={logs} />
+          {actionLines.length > 0 && <TerminalConsole title="Действия Minecraft" lines={actionLines} />}
         </Card>
       </div>
     </div>

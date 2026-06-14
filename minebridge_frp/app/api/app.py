@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from minebridge_frp.app.api.runtime import BackendRuntime
@@ -36,6 +37,20 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     runtime = BackendRuntime(context or AppContext.create())
     app = FastAPI(title="MineBridge FRP Backend", version="0.1.0")
     app.state.runtime = runtime
+
+    # The Electron renderer runs from a different origin than the local
+    # backend (``http://127.0.0.1:5173`` in dev and ``file://`` in the packaged
+    # app), so without CORS headers Chromium blocks every API response and the
+    # UI gets stuck on the loading placeholders. The backend only listens on
+    # localhost, so allowing any origin here is safe.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_origin_regex=".*",
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.exception_handler(MineBridgeError)
     async def minebridge_error_handler(_request, exc: MineBridgeError):
@@ -70,7 +85,14 @@ def create_app(context: AppContext | None = None) -> FastAPI:
         bundle = runtime.profile_service.get_active_vps_profile()
         if bundle.profile.id != profile_id:
             bundle = runtime.profile_service.set_active_vps_profile(profile_id)
-        bundle.config = payload.config.model_copy(update={"id": bundle.config.id})
+        password_encrypted = (
+            runtime.password_vault.encrypt_password(payload.password)
+            if payload.password
+            else payload.config.password_encrypted
+        )
+        bundle.config = payload.config.model_copy(
+            update={"id": bundle.config.id, "password_encrypted": password_encrypted}
+        )
         return runtime.profile_service.save_vps_profile(bundle)
 
     @app.patch("/api/profiles/vps/{profile_id}/name", response_model=VpsProfileBundle)
@@ -237,6 +259,14 @@ def create_app(context: AppContext | None = None) -> FastAPI:
         )
         return ApiMessage(message=str(path))
 
+    @app.post("/api/minecraft/eula", response_model=ApiMessage)
+    def create_eula_file() -> ApiMessage:
+        config = runtime.profile_service.get_active_minecraft_profile().config
+        if not config.server_dir:
+            raise ConfigurationError("Папка Minecraft-сервера не выбрана.")
+        path = runtime.minecraft_manager.open_eula(Path(config.server_dir))
+        return ApiMessage(message=str(path))
+
     @app.post("/api/minecraft/start", response_model=ApiMessage)
     def start_minecraft() -> ApiMessage:
         runtime.minecraft_manager.start_server(
@@ -267,6 +297,10 @@ def create_app(context: AppContext | None = None) -> FastAPI:
         bundle = runtime.profile_service.get_active_tunnel_profile()
         path = runtime.frp_manager.write_frpc_config(bundle.config, bundle.profile.name)
         return ApiMessage(message=str(path))
+
+    @app.post("/api/frpc/token", response_model=ApiMessage)
+    def generate_frp_token() -> ApiMessage:
+        return ApiMessage(message=runtime.frp_manager.generate_token())
 
     @app.post("/api/frpc/download", response_model=ApiMessage)
     def download_frpc() -> ApiMessage:

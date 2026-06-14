@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
@@ -11,6 +13,12 @@ from minebridge_frp.app.models.minecraft import MinecraftConfig
 from minebridge_frp.app.services.events import CallbackSignal
 from minebridge_frp.app.services.process_runner import ProcessRunner
 from minebridge_frp.app.utils.ports import wait_until_port_open
+
+_JOIN_PATTERN = re.compile(r"(?:\]:?\s*)([A-Za-z0-9_]{1,16}) joined the game\b")
+_LEFT_PATTERN = re.compile(
+    r"(?:\]:?\s*)([A-Za-z0-9_]{1,16}) (?:left the game|lost connection)\b"
+)
+_DONE_PATTERN = re.compile(r'Done \([0-9.]+s\)!')
 
 
 def parse_server_properties(text: str) -> dict[str, str]:
@@ -43,11 +51,73 @@ class MinecraftManager:
         self.log_line = CallbackSignal[[str]]()
         self.status_changed = CallbackSignal[[str]]()
         self.error = CallbackSignal[[str]]()
+        self.players_changed = CallbackSignal[[int, list]]()
+        self.ready = CallbackSignal[[]]()
         self.process = ProcessRunner()
-        self.process.output.connect(self.log_line.emit)
-        self.process.started.connect(lambda: self.status_changed.emit("running"))
-        self.process.finished.connect(lambda _code: self.status_changed.emit("stopped"))
+        self._players: list[str] = []
+        self._started_at: float | None = None
+        self.process.output.connect(self._handle_output)
+        self.process.started.connect(self._handle_started)
+        self.process.finished.connect(self._handle_finished)
         self.process.error.connect(self.error.emit)
+
+    @property
+    def pid(self) -> int | None:
+        return self.process.pid
+
+    @property
+    def is_running(self) -> bool:
+        return self.process.is_running
+
+    @property
+    def players(self) -> list[str]:
+        return list(self._players)
+
+    @property
+    def player_count(self) -> int:
+        return len(self._players)
+
+    @property
+    def uptime_seconds(self) -> float:
+        if self._started_at is None or not self.process.is_running:
+            return 0.0
+        return max(0.0, time.time() - self._started_at)
+
+    def _handle_started(self) -> None:
+        self._started_at = time.time()
+        self._players = []
+        self.players_changed.emit(0, [])
+        self.status_changed.emit("running")
+
+    def _handle_finished(self, _code: int) -> None:
+        self._started_at = None
+        if self._players:
+            self._players = []
+            self.players_changed.emit(0, [])
+        self.status_changed.emit("stopped")
+
+    def _handle_output(self, line: str) -> None:
+        self.log_line.emit(line)
+        self._scan_for_players(line)
+        if _DONE_PATTERN.search(line):
+            self.ready.emit()
+
+    def _scan_for_players(self, line: str) -> None:
+        changed = False
+        join = _JOIN_PATTERN.search(line)
+        if join:
+            name = join.group(1)
+            if name not in self._players:
+                self._players.append(name)
+                changed = True
+        left = _LEFT_PATTERN.search(line)
+        if left:
+            name = left.group(1)
+            if name in self._players:
+                self._players.remove(name)
+                changed = True
+        if changed:
+            self.players_changed.emit(len(self._players), list(self._players))
 
     def find_java(self) -> str | None:
         """Find java executable in PATH."""

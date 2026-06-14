@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCheck2, FileCode2, Play, Save, Send, Square } from "lucide-react";
+import { Cpu, FileCheck2, FileCode2, MemoryStick, Play, Save, Square, Users } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { MinecraftConfig } from "../lib/types";
+import { formatDuration, formatMb, useUptime } from "../lib/format";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Gauge, MetricArea } from "../components/ui/charts";
+import { Console } from "../components/ui/Console";
 import { Field, SelectInput, TextInput } from "../components/ui/Field";
 import { ProfilePicker } from "../components/ui/ProfilePicker";
 import { ScreenHeader } from "../components/ui/ScreenHeader";
-import { TerminalConsole } from "../components/ui/TerminalConsole";
+import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAppStore } from "../store/app-store";
 
 export function MinecraftScreen() {
@@ -19,9 +22,15 @@ export function MinecraftScreen() {
     queryFn: api.activeMinecraftProfile
   });
   const [config, setConfig] = useState<MinecraftConfig | null>(null);
-  const [command, setCommand] = useState("");
   const [actionLines, setActionLines] = useState<string[]>([]);
   const logs = useAppStore((state) => state.minecraftLogs);
+  const status = useAppStore((state) => state.minecraftStatus);
+  const metrics = useAppStore((state) => state.metrics);
+  const latest = useAppStore((state) => state.latest);
+  const players = useAppStore((state) => state.players);
+  const playerCount = useAppStore((state) => state.playerCount);
+  const serverStartedAt = useAppStore((state) => state.serverStartedAt);
+  const uptime = useUptime(serverStartedAt);
 
   useEffect(() => {
     if (active.data) setConfig(active.data.config);
@@ -42,10 +51,7 @@ export function MinecraftScreen() {
   const stop = useMutation({ mutationFn: api.stopMinecraft });
   const serverProperties = useMutation({ mutationFn: api.saveServerProperties });
   const eula = useMutation({ mutationFn: api.createEulaFile });
-  const send = useMutation({
-    mutationFn: () => api.sendMinecraftCommand(command),
-    onSuccess: () => setCommand("")
-  });
+  const send = useMutation({ mutationFn: (command: string) => api.sendMinecraftCommand(command) });
 
   const runAction = (title: string, action: () => Promise<{ message: string }>) => {
     setActionLines((lines) => [...lines, `${title}...`]);
@@ -62,12 +68,36 @@ export function MinecraftScreen() {
     );
   if (!config) return <div className="screen">Загрузка Minecraft-профиля...</div>;
 
+  const serverRunning = status === "running";
+  const maxPlayers = config.max_players || 20;
+  const memLimitMb = parseMemory(config.xmx);
+
   return (
     <div className="screen stack">
       <ScreenHeader
         eyebrow="Minecraft"
         title="Локальный сервер"
-        description="Настройка server.jar, памяти, server.properties и консоли команд."
+        description="Настройки запуска, живые графики ресурсов и интерактивная консоль команд."
+        action={
+          <div className="hero-actions">
+            <StatusBadge status={status} label={`сервер: ${status}`} />
+            <Button
+              variant="primary"
+              icon={<Play size={16} />}
+              disabled={serverRunning || start.isPending}
+              onClick={() => start.mutate()}
+            >
+              Запустить
+            </Button>
+            <Button
+              icon={<Square size={16} />}
+              disabled={!serverRunning || stop.isPending}
+              onClick={() => stop.mutate()}
+            >
+              Остановить
+            </Button>
+          </div>
+        }
       />
 
       <ProfilePicker
@@ -82,8 +112,69 @@ export function MinecraftScreen() {
         deleteProfile={api.deleteMinecraftProfile}
       />
 
+      <div className="gauge-grid">
+        <Card title="CPU сервера">
+          <Gauge value={latest?.server_cpu ?? 0} label="java" color="#f472b6" />
+        </Card>
+        <Card title="RAM сервера">
+          <Gauge
+            value={latest?.server_ram_mb ?? 0}
+            max={memLimitMb}
+            unit=" МБ"
+            label={`лимит ${formatMb(memLimitMb)}`}
+            color="#f59e0b"
+          />
+        </Card>
+        <Card title="Игроки">
+          <Gauge value={playerCount} max={maxPlayers} unit="" label="онлайн" color="#34d399" />
+        </Card>
+        <Card title="Сводка">
+          <div className="state-stack">
+            <div className="state-row">
+              <span>Аптайм</span>
+              <strong>{serverRunning ? formatDuration(uptime) : "—"}</strong>
+            </div>
+            <div className="state-row">
+              <span>CPU системы</span>
+              <strong>{latest?.cpu ?? 0}%</strong>
+            </div>
+            <div className="state-row">
+              <span>Игроки</span>
+              <strong>{players.length ? players.join(", ") : "никого"}</strong>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="two-columns">
+        <Card title="Ресурсы сервера" eyebrow="Live" action={<MemoryStick size={16} />}>
+          <MetricArea
+            data={metrics}
+            series={[
+              { key: "server_ram_mb", label: "RAM (МБ)", color: "#f59e0b" },
+              { key: "server_cpu", label: "CPU (%)", color: "#f472b6" }
+            ]}
+          />
+        </Card>
+        <Card title="Игроки онлайн" eyebrow="Live" action={<Users size={16} />}>
+          <MetricArea
+            data={metrics}
+            domainMax={Math.max(maxPlayers, 4)}
+            series={[{ key: "players", label: "Игроки", color: "#34d399" }]}
+          />
+        </Card>
+      </div>
+
+      <Console
+        title="Консоль Minecraft"
+        lines={logs.slice(-220)}
+        onSubmit={(command) => send.mutate(command)}
+        disabled={!serverRunning}
+        disabledHint="запустите сервер, чтобы вводить команды"
+      />
+
       <div className="two-columns wide-left">
-        <Card title="Сервер и запуск">
+        <Card title="Сервер и запуск" action={<Cpu size={16} />}>
           <div className="form-grid">
             <Field label="Папка сервера">
               <TextInput value={config.server_dir} onChange={(e) => setConfig({ ...config, server_dir: e.target.value })} />
@@ -130,6 +221,13 @@ export function MinecraftScreen() {
                 ))}
               </SelectInput>
             </Field>
+            <Field label="Макс. игроков">
+              <TextInput
+                type="number"
+                value={config.max_players}
+                onChange={(e) => setConfig({ ...config, max_players: Number(e.target.value) })}
+              />
+            </Field>
             <Field label="MOTD">
               <TextInput value={config.motd} onChange={(e) => setConfig({ ...config, motd: e.target.value })} />
             </Field>
@@ -152,33 +250,41 @@ export function MinecraftScreen() {
             >
               eula.txt
             </Button>
-            <Button variant="primary" icon={<Play size={16} />} onClick={() => start.mutate()}>
-              Запустить
-            </Button>
-            <Button icon={<Square size={16} />} onClick={() => stop.mutate()}>
-              Остановить
-            </Button>
           </div>
         </Card>
 
-        <Card title="Команда серверу">
-          <div className="command-box">
-            <TextInput
-              value={command}
-              placeholder="say hello"
-              onChange={(e) => setCommand(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && command.trim()) send.mutate();
-              }}
-            />
-            <Button icon={<Send size={16} />} disabled={!command.trim()} onClick={() => send.mutate()}>
-              Отправить
+        <Card title="Действия">
+          <p className="muted">
+            Быстрые команды отправляются в работающий сервер. Используйте консоль выше для любых
+            команд (например <code>list</code>, <code>say</code>, <code>op</code>).
+          </p>
+          <div className="action-row">
+            <Button disabled={!serverRunning} onClick={() => send.mutate("list")}>
+              list
+            </Button>
+            <Button disabled={!serverRunning} onClick={() => send.mutate("say Привет от MineBridge!")}>
+              say
+            </Button>
+            <Button disabled={!serverRunning} onClick={() => send.mutate("save-all")}>
+              save-all
+            </Button>
+            <Button variant="danger" disabled={!serverRunning} onClick={() => stop.mutate()}>
+              stop
             </Button>
           </div>
-          <TerminalConsole title="Minecraft logs" lines={logs} />
-          {actionLines.length > 0 && <TerminalConsole title="Действия Minecraft" lines={actionLines} />}
+          {actionLines.length > 0 && <Console title="Действия Minecraft" lines={actionLines} />}
         </Card>
       </div>
     </div>
   );
+}
+
+function parseMemory(value: string): number {
+  const match = /^(\d+(?:\.\d+)?)\s*([gGmMkK]?)/.exec(value.trim());
+  if (!match) return 2048;
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === "g") return Math.round(amount * 1024);
+  if (unit === "k") return Math.max(1, Math.round(amount / 1024));
+  return Math.round(amount || 2048);
 }

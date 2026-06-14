@@ -5,6 +5,7 @@ import type {
   MinecraftConfig,
   Profile,
   ProfileBundle,
+  RuntimeState,
   SectionProfileBundle,
   TunnelConfig,
   VpsConfig
@@ -39,6 +40,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   health: () => request<ApiMessage>("/api/health"),
   activeProfile: () => request<ProfileBundle>("/api/profiles/active"),
+  runtimeState: () => request<RuntimeState>("/api/runtime/state"),
 
   vpsProfiles: () => request<Profile[]>("/api/profiles/vps"),
   activeVpsProfile: () => request<SectionProfileBundle<VpsConfig>>("/api/profiles/vps/active"),

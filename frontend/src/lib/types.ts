@@ -90,6 +90,30 @@ export type BackendEvent = {
   payload: Record<string, unknown>;
 };
 
+export type MetricsSample = {
+  ts: number;
+  time: string;
+  cpu: number;
+  ram_percent: number;
+  ram_used_mb: number;
+  ram_total_mb: number;
+  net_up_kbps: number;
+  net_down_kbps: number;
+  server_running: boolean;
+  server_cpu: number;
+  server_ram_mb: number;
+  players: number;
+};
+
+export type RuntimeState = {
+  minecraft_status: string;
+  frpc_status: string;
+  players: string[];
+  player_count: number;
+  uptime_seconds: number;
+  metrics: MetricsSample | null;
+};
+
 export type ScreenId =
   | "dashboard"
   | "servers"

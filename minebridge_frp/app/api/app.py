@@ -56,9 +56,25 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     async def minebridge_error_handler(_request, exc: MineBridgeError):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
 
+    @app.on_event("startup")
+    def _on_startup() -> None:
+        runtime.start()
+
+    @app.on_event("shutdown")
+    def _on_shutdown() -> None:
+        runtime.shutdown()
+
     @app.get("/api/health", response_model=ApiMessage)
     def health() -> ApiMessage:
         return ApiMessage(message="ok")
+
+    @app.get("/api/runtime/state")
+    def runtime_state() -> dict:
+        return runtime.state_snapshot()
+
+    @app.get("/api/metrics/snapshot")
+    def metrics_snapshot() -> dict:
+        return runtime.metrics.last_snapshot or {}
 
     @app.get("/api/profiles/active", response_model=ProfileBundle)
     def active_profile() -> ProfileBundle:

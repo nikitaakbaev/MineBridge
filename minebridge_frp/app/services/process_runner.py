@@ -29,6 +29,13 @@ class ProcessRunner:
         with self._lock:
             return self.process is not None and self.process.poll() is None
 
+    @property
+    def pid(self) -> int | None:
+        with self._lock:
+            if self.process is not None and self.process.poll() is None:
+                return self.process.pid
+            return None
+
     def start(
         self,
         program: str | Path,

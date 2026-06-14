@@ -37,6 +37,30 @@ select {
   font: inherit;
 }
 
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+  background-color: rgba(96, 165, 250, 0.28);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(96, 165, 250, 0.5);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::selection {
+  background: rgba(96, 165, 250, 0.32);
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 268px minmax(0, 1fr);
@@ -458,10 +482,21 @@ select {
 }
 
 .terminal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 12px 14px;
   color: #c7d2e4;
+  font-weight: 600;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(15, 23, 42, 0.82);
+}
+
+.terminal-hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6f8099;
 }
 
 .terminal-host {
@@ -474,6 +509,159 @@ select {
 .chart {
   height: 220px;
   min-height: 0;
+}
+
+/* Hero pills */
+.hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d7e3f5;
+  background: rgba(8, 17, 31, 0.4);
+}
+
+.hero-pill svg {
+  color: #7dd3fc;
+}
+
+/* Stat tiles */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-tile {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background:
+    linear-gradient(160deg, rgba(30, 41, 59, 0.55), rgba(15, 23, 42, 0.7));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.stat-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #9fb0c8;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-hint {
+  font-size: 12px;
+  color: #7286a1;
+}
+
+.stat-spark {
+  margin: 4px -6px -4px;
+}
+
+/* Gauges */
+.gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.gauge {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.gauge-readout {
+  position: absolute;
+  top: 52%;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.gauge-readout strong {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.gauge-readout strong small {
+  font-size: 15px;
+  font-weight: 600;
+  color: #9fb0c8;
+}
+
+.gauge-readout span {
+  font-size: 12px;
+  color: #7286a1;
+}
+
+/* State stacks */
+.state-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 14px;
+}
+
+.state-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.state-row span {
+  color: #9fb0c8;
+}
+
+code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.86em;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.18);
 }
 
 .diagnostic-list,
@@ -527,6 +715,13 @@ select {
   background: rgba(127, 29, 29, 0.2);
 }
 
+@media (max-width: 1320px) {
+  .stat-grid,
+  .gauge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 92px minmax(0, 1fr);
@@ -545,6 +740,8 @@ select {
 
   .status-grid,
   .card-grid,
+  .stat-grid,
+  .gauge-grid,
   .two-columns,
   .two-columns.wide-left,
   .log-grid,

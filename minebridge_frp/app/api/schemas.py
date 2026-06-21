@@ -5,6 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from minebridge_frp.app.models.minecraft import MinecraftConfig
+from minebridge_frp.app.models.setup import SetupStep
 from minebridge_frp.app.models.tunnel import TunnelConfig
 from minebridge_frp.app.models.vps import VpsConfig
 
@@ -46,3 +47,24 @@ class SaveMinecraftProfileRequest(BaseModel):
 
 class SaveTunnelProfileRequest(BaseModel):
     config: TunnelConfig
+
+
+class DetectLaunchersRequest(BaseModel):
+    server_dir: str = ""
+
+
+class LauncherCandidateOut(BaseModel):
+    path: str
+    kind: str
+    score: int
+
+
+class JavaInstallationOut(BaseModel):
+    path: str
+    version: str
+    vendor: str = ""
+
+
+class SetupStatusUpdate(BaseModel):
+    current_step: SetupStep | None = None
+    completed: bool | None = None

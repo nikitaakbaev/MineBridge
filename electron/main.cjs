@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require("electron");
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 
@@ -57,6 +57,32 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, "../dist-electron/renderer/index.html"));
   }
 }
+
+ipcMain.handle("minebridge:pick-directory", async (_event, options = {}) => {
+  const target = mainWindow ?? BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(target, {
+    title: options.title || "Выберите папку",
+    defaultPath: options.defaultPath || undefined,
+    properties: ["openDirectory", "createDirectory"]
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle("minebridge:pick-file", async (_event, options = {}) => {
+  const target = mainWindow ?? BrowserWindow.getFocusedWindow();
+  const filters = Array.isArray(options.filters) && options.filters.length > 0
+    ? options.filters
+    : [{ name: "Все файлы", extensions: ["*"] }];
+  const result = await dialog.showOpenDialog(target, {
+    title: options.title || "Выберите файл",
+    defaultPath: options.defaultPath || undefined,
+    filters,
+    properties: ["openFile"]
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {

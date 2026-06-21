@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -19,6 +20,10 @@ _LEFT_PATTERN = re.compile(
     r"(?:\]:?\s*)([A-Za-z0-9_]{1,16}) (?:left the game|lost connection)\b"
 )
 _DONE_PATTERN = re.compile(r'Done \([0-9.]+s\)!')
+
+_SHELL_SCRIPT_SUFFIXES = {".sh", ".bash"}
+_WINDOWS_SCRIPT_SUFFIXES = {".bat", ".cmd"}
+_POWERSHELL_SCRIPT_SUFFIXES = {".ps1"}
 
 
 def parse_server_properties(text: str) -> dict[str, str]:
@@ -187,24 +192,92 @@ class MinecraftManager:
 
         server_dir = Path(config.server_dir)
         jar_path = Path(config.jar_path)
-        java_path = config.java_path or self.find_java()
 
         if not server_dir.exists():
             raise ConfigurationError("Папка сервера не существует.")
         if not jar_path.exists():
-            raise ConfigurationError("server.jar не найден.")
-        if not java_path:
-            raise ConfigurationError("Java не найдена.")
+            raise ConfigurationError("Файл запуска сервера не найден.")
         if not self.check_eula(server_dir):
             raise ConfigurationError(
                 "EULA Minecraft не принята. Откройте eula.txt и подтвердите EULA."
             )
 
-        self.process.start(
-            java_path,
-            [f"-Xms{config.xms}", f"-Xmx{config.xmx}", "-jar", str(jar_path), "nogui"],
+        suffix = jar_path.suffix.lower()
+        if suffix in _SHELL_SCRIPT_SUFFIXES:
+            command = self._build_shell_script_command(jar_path)
+        elif suffix in _WINDOWS_SCRIPT_SUFFIXES:
+            command = self._build_batch_script_command(jar_path)
+        elif suffix in _POWERSHELL_SCRIPT_SUFFIXES:
+            command = self._build_powershell_script_command(jar_path)
+        else:
+            command = self._build_jar_command(config, jar_path)
+
+        env = self._build_launch_env(config, is_script=suffix != ".jar")
+        self.process.start_command(
+            command,
             working_directory=server_dir,
+            env=env,
         )
+
+    def _build_jar_command(self, config: MinecraftConfig, jar_path: Path) -> list[str]:
+        java_path = config.java_path or self.find_java()
+        if not java_path:
+            raise ConfigurationError("Java не найдена.")
+        return [
+            java_path,
+            f"-Xms{config.xms}",
+            f"-Xmx{config.xmx}",
+            "-jar",
+            str(jar_path),
+            "nogui",
+        ]
+
+    def _build_shell_script_command(self, script_path: Path) -> list[str]:
+        bash = shutil.which("bash") or shutil.which("sh")
+        if not bash:
+            raise ConfigurationError(
+                "Не найден bash/sh для запуска .sh скрипта. "
+                "Установите Git for Windows или WSL, либо выберите .bat файл."
+            )
+        return [bash, str(script_path), "nogui"]
+
+    def _build_batch_script_command(self, script_path: Path) -> list[str]:
+        if os.name != "nt":
+            raise ConfigurationError(
+                ".bat/.cmd скрипты можно запустить только в Windows. "
+                "Сконвертируйте запуск в .sh или укажите server.jar."
+            )
+        comspec = os.environ.get("ComSpec") or "cmd.exe"
+        return [comspec, "/c", str(script_path), "nogui"]
+
+    def _build_powershell_script_command(self, script_path: Path) -> list[str]:
+        powershell = shutil.which("pwsh") or shutil.which("powershell")
+        if not powershell:
+            raise ConfigurationError(
+                "PowerShell не найден в PATH для запуска .ps1 скрипта."
+            )
+        return [
+            powershell,
+            "-ExecutionPolicy",
+            "Bypass",
+            "-NoProfile",
+            "-File",
+            str(script_path),
+            "nogui",
+        ]
+
+    def _build_launch_env(
+        self,
+        config: MinecraftConfig,
+        *,
+        is_script: bool,
+    ) -> dict[str, str] | None:
+        if not is_script:
+            return None
+        memory_opts = f"-Xms{config.xms} -Xmx{config.xmx}".strip()
+        if not memory_opts:
+            return None
+        return {"JAVA_TOOL_OPTIONS": memory_opts}
 
     def stop_server_gracefully(self) -> None:
         """Send the Minecraft stop command."""

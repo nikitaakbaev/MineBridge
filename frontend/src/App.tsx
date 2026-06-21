@@ -1,24 +1,20 @@
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { AppShell } from "./components/layout/AppShell";
+import { ConsoleDrawer } from "./components/ui/ConsoleDrawer";
 import { useBackendEvents } from "./hooks/useBackendEvents";
+import { api } from "./lib/api";
 import { useAppStore } from "./store/app-store";
-import { DashboardScreen } from "./screens/DashboardScreen";
-import { ServersScreen } from "./screens/ServersScreen";
-import { MinecraftScreen } from "./screens/MinecraftScreen";
-import { TunnelsScreen } from "./screens/TunnelsScreen";
-import { VpsScreen } from "./screens/VpsScreen";
-import { DiagnosticsScreen } from "./screens/DiagnosticsScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { SetupScreen } from "./screens/SetupScreen";
 import { LogsScreen } from "./screens/LogsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 
 const screens = {
-  dashboard: <DashboardScreen />,
-  servers: <ServersScreen />,
-  minecraft: <MinecraftScreen />,
-  tunnels: <TunnelsScreen />,
-  vps: <VpsScreen />,
-  diagnostics: <DiagnosticsScreen />,
+  home: <HomeScreen />,
+  setup: <SetupScreen />,
   logs: <LogsScreen />,
   settings: <SettingsScreen />
 };
@@ -26,6 +22,37 @@ const screens = {
 export function App() {
   useBackendEvents();
   const activeScreen = useAppStore((state) => state.activeScreen);
+  const setupStatus = useAppStore((state) => state.setupStatus);
+  const setSetupStatus = useAppStore((state) => state.setSetupStatus);
+  const setActiveScreen = useAppStore((state) => state.setActiveScreen);
+  const toggleConsole = useAppStore((state) => state.toggleConsole);
+
+  const setupQuery = useQuery({
+    queryKey: ["setup-status"],
+    queryFn: api.getSetupStatus,
+    staleTime: 5_000
+  });
+
+  useEffect(() => {
+    if (!setupQuery.data) return;
+    setSetupStatus(setupQuery.data);
+    if (!setupStatus && !setupQuery.data.completed) {
+      setActiveScreen("setup");
+    }
+  }, [setupQuery.data, setupStatus, setSetupStatus, setActiveScreen]);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "`" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const target = event.target as HTMLElement | null;
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+        event.preventDefault();
+        toggleConsole();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [toggleConsole]);
 
   return (
     <AppShell>
@@ -41,6 +68,7 @@ export function App() {
           {screens[activeScreen]}
         </motion.div>
       </AnimatePresence>
+      <ConsoleDrawer />
     </AppShell>
   );
 }

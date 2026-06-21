@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { BackendEvent, MetricsSample, RuntimeState, ScreenId } from "../lib/types";
+import type { BackendEvent, MetricsSample, RuntimeState, ScreenId, SetupState } from "../lib/types";
 
 type RuntimeStatus = "idle" | "running" | "stopping" | "stopped" | "error" | string;
 
@@ -22,8 +22,13 @@ type AppState = {
   uptimeSeconds: number;
   serverReadyAt: number | null;
   serverStartedAt: number | null;
+  setupStatus: SetupState | null;
+  consoleOpen: boolean;
   setActiveScreen: (screen: ScreenId) => void;
   setBackendConnected: (connected: boolean) => void;
+  setSetupStatus: (status: SetupState) => void;
+  setConsoleOpen: (open: boolean) => void;
+  toggleConsole: () => void;
   pushLog: (target: "minecraft" | "frpc" | "vps", line: string) => void;
   hydrateState: (state: RuntimeState) => void;
   ingestEvent: (event: BackendEvent) => void;
@@ -33,7 +38,7 @@ const limit = (items: string[]) => items.slice(-LOG_LIMIT);
 const limitMetrics = (items: MetricsSample[]) => items.slice(-METRICS_LIMIT);
 
 export const useAppStore = create<AppState>((set) => ({
-  activeScreen: "dashboard",
+  activeScreen: "home",
   minecraftStatus: "idle",
   frpcStatus: "idle",
   backendConnected: false,
@@ -47,8 +52,13 @@ export const useAppStore = create<AppState>((set) => ({
   uptimeSeconds: 0,
   serverReadyAt: null,
   serverStartedAt: null,
+  setupStatus: null,
+  consoleOpen: false,
   setActiveScreen: (activeScreen) => set({ activeScreen }),
   setBackendConnected: (backendConnected) => set({ backendConnected }),
+  setSetupStatus: (setupStatus) => set({ setupStatus }),
+  setConsoleOpen: (consoleOpen) => set({ consoleOpen }),
+  toggleConsole: () => set((state) => ({ consoleOpen: !state.consoleOpen })),
   pushLog: (target, line) =>
     set((state) => {
       if (target === "minecraft") {

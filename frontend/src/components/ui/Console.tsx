@@ -12,11 +12,25 @@ type ConsoleProps = {
   disabledHint?: string;
 };
 
+const ESC = "";
 const COLORS = {
-  prompt: "\u001b[38;5;45m",
-  dim: "\u001b[38;5;245m",
-  reset: "\u001b[0m"
+  prompt: `${ESC}[38;5;45m`,
+  dim: `${ESC}[38;5;245m`,
+  reset: `${ESC}[0m`
 };
+const ERASE_LINE = `\r${ESC}[2K`;
+
+const KEY_BACKSPACE = "";
+const KEY_CTRL_C = "";
+const KEY_UP = `${ESC}[A`;
+const KEY_DOWN = `${ESC}[B`;
+
+function commonPrefixLength(a: string[], b: string[]): number {
+  const max = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < max && a[i] === b[i]) i++;
+  return i;
+}
 
 export function Console({
   lines,
@@ -29,13 +43,11 @@ export function Console({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
-  const writtenRef = useRef(0);
-  const lastLineRef = useRef<string | null>(null);
+  const renderedRef = useRef<string[]>([]);
   const bufferRef = useRef("");
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef<number | null>(null);
 
-  // Keep the latest callbacks/flags accessible inside the stable onData handler.
   const onSubmitRef = useRef(onSubmit);
   const disabledRef = useRef(disabled);
   onSubmitRef.current = onSubmit;
@@ -49,6 +61,7 @@ export function Console({
       convertEol: true,
       cursorBlink: interactive,
       disableStdin: !interactive,
+      scrollback: 5000,
       fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, monospace",
       fontSize: 13,
       theme: {
@@ -74,7 +87,7 @@ export function Console({
 
     const writePrompt = () => {
       if (!interactive) return;
-      terminal.write(`\r\u001b[2K${COLORS.prompt}${prompt}${COLORS.reset}${bufferRef.current}`);
+      terminal.write(`${ERASE_LINE}${COLORS.prompt}${prompt}${COLORS.reset}${bufferRef.current}`);
     };
 
     const replaceBuffer = (next: string) => {
@@ -98,18 +111,18 @@ export function Console({
             writePrompt();
             break;
           }
-          case "\u007f": // Backspace
+          case KEY_BACKSPACE:
             if (bufferRef.current.length > 0) {
               bufferRef.current = bufferRef.current.slice(0, -1);
               terminal.write("\b \b");
             }
             break;
-          case "\u0003": // Ctrl+C
+          case KEY_CTRL_C:
             bufferRef.current = "";
             terminal.write("^C\r\n");
             writePrompt();
             break;
-          case "\u001b[A": { // Up
+          case KEY_UP: {
             const history = historyRef.current;
             if (history.length === 0) break;
             const index =
@@ -120,7 +133,7 @@ export function Console({
             replaceBuffer(history[index]);
             break;
           }
-          case "\u001b[B": { // Down
+          case KEY_DOWN: {
             const history = historyRef.current;
             if (historyIndexRef.current === null) break;
             const index = historyIndexRef.current + 1;
@@ -149,45 +162,39 @@ export function Console({
       terminal.dispose();
       terminalRef.current = null;
       fitRef.current = null;
-      writtenRef.current = 0;
-      lastLineRef.current = null;
+      renderedRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Stream output lines incrementally so the typed prompt is preserved.
   useEffect(() => {
     const terminal = terminalRef.current;
     if (!terminal) return;
 
     const writePrompt = () => {
       if (!interactive) return;
-      terminal.write(`\r\u001b[2K${COLORS.prompt}${prompt}${COLORS.reset}${bufferRef.current}`);
+      terminal.write(`${ERASE_LINE}${COLORS.prompt}${prompt}${COLORS.reset}${bufferRef.current}`);
     };
 
+    const previous = renderedRef.current;
+    const sharedPrefix = commonPrefixLength(previous, lines);
+    const previousMatchesPrefix = sharedPrefix === previous.length;
+
     let newLines: string[];
-    const lastLine = lines.length > 0 ? lines[lines.length - 1] : null;
-    if (lines.length < writtenRef.current) {
-      // The buffer shrank (reset) — repaint everything.
-      terminal.clear();
-      newLines = lines;
-    } else if (lines.length === writtenRef.current) {
-      // Length unchanged: either nothing new, or a capped ring-buffer shift.
-      if (lastLine === lastLineRef.current) {
-        return;
-      }
-      terminal.clear();
-      newLines = lines;
+    if (previousMatchesPrefix) {
+      newLines = lines.slice(previous.length);
     } else {
-      newLines = lines.slice(writtenRef.current);
+      terminal.reset();
+      newLines = lines;
     }
-    writtenRef.current = lines.length;
-    lastLineRef.current = lastLine;
+    renderedRef.current = lines.slice();
 
-    if (newLines.length === 0) return;
+    if (newLines.length === 0) {
+      if (!previousMatchesPrefix) writePrompt();
+      return;
+    }
 
-    // Erase the current prompt line, append output, then redraw the prompt.
-    if (interactive) terminal.write("\r\u001b[2K");
+    if (interactive) terminal.write(ERASE_LINE);
     for (const line of newLines) {
       terminal.writeln(line);
     }

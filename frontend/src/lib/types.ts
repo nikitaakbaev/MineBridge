@@ -33,13 +33,25 @@ export type MinecraftConfig = {
   xmx: string;
   mc_port: number;
   server_type: "Vanilla" | "Paper" | "Fabric" | "Forge" | "NeoForge";
-  mc_version: string;
+  mc_version?: string;
   online_mode: boolean;
   difficulty: "peaceful" | "easy" | "normal" | "hard";
   max_players: number;
   motd: string;
   view_distance: number;
   simulation_distance: number;
+};
+
+export type LauncherCandidate = {
+  path: string;
+  kind: "jar" | "shell" | "batch" | "powershell" | "script";
+  score: number;
+};
+
+export type JavaInstallation = {
+  path: string;
+  version: string;
+  vendor: string;
 };
 
 export type TunnelConfig = {
@@ -114,12 +126,11 @@ export type RuntimeState = {
   metrics: MetricsSample | null;
 };
 
-export type ScreenId =
-  | "dashboard"
-  | "servers"
-  | "minecraft"
-  | "tunnels"
-  | "vps"
-  | "diagnostics"
-  | "logs"
-  | "settings";
+export type ScreenId = "home" | "setup" | "logs" | "settings";
+
+export type SetupStep = "vps" | "tunnel" | "server" | "done";
+
+export type SetupState = {
+  completed: boolean;
+  current_step: SetupStep;
+};

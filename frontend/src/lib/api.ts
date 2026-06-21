@@ -2,11 +2,15 @@ import type {
   ApiMessage,
   CommandOutput,
   DiagnosticResult,
+  JavaInstallation,
+  LauncherCandidate,
   MinecraftConfig,
   Profile,
   ProfileBundle,
   RuntimeState,
   SectionProfileBundle,
+  SetupState,
+  SetupStep,
   TunnelConfig,
   VpsConfig
 } from "./types";
@@ -175,6 +179,14 @@ export const api = {
       body: JSON.stringify({ command })
     }),
 
+  detectLaunchers: (server_dir: string) =>
+    request<LauncherCandidate[]>("/api/minecraft/detect-launchers", {
+      method: "POST",
+      body: JSON.stringify({ server_dir })
+    }),
+  detectJava: () =>
+    request<JavaInstallation[]>("/api/minecraft/detect-java", { method: "POST" }),
+
   createFrpcConfig: () => request<ApiMessage>("/api/frpc/config", { method: "POST" }),
   generateFrpToken: () => request<ApiMessage>("/api/frpc/token", { method: "POST" }),
   downloadFrpc: () => request<ApiMessage>("/api/frpc/download", { method: "POST" }),
@@ -186,5 +198,12 @@ export const api = {
     request<DiagnosticResult[]>("/api/diagnostics/run", {
       method: "POST"
     }),
-  appLog: () => request<ApiMessage>("/api/logs/app")
+  appLog: () => request<ApiMessage>("/api/logs/app"),
+
+  getSetupStatus: () => request<SetupState>("/api/setup/status"),
+  setSetupStatus: (update: { current_step?: SetupStep; completed?: boolean }) =>
+    request<SetupState>("/api/setup/status", {
+      method: "POST",
+      body: JSON.stringify(update)
+    })
 };

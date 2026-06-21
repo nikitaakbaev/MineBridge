@@ -99,9 +99,54 @@ minebridge-frp-api
 
 ## Сборка
 
+Renderer (для разработки):
+
 ```bash
 npm run build        # tsc --noEmit + vite build → dist-electron/renderer/
 ```
+
+### Сборка установщика (npm package)
+
+Для дистрибуции используется [electron-builder](https://www.electron.build/). Команды:
+
+```bash
+npm install          # один раз
+npm run dist         # сборка под текущую ОС
+npm run dist:win     # NSIS .exe + portable .exe (только под Windows)
+npm run dist:linux   # AppImage + .deb (только под Linux)
+npm run dist:dir     # без архива — папка с готовым приложением для отладки
+```
+
+Артефакты появятся в `dist-installer/`:
+
+- **Windows**: `MineBridge-FRP-<version>-x64.exe` (NSIS-инсталлятор) + `MineBridge-FRP-<version>-x64.exe` (portable).
+- **Linux**: `MineBridge-FRP-<version>-x64.AppImage` (запускается двойным кликом) + `MineBridge-FRP-<version>-x64.deb`.
+
+Иконки лежат в [`resources/icons/`](resources/icons/) — туда нужно положить `icon.ico` (Windows, 256×256) и `icon.png` 512×512 (Linux). Если файлов нет, electron-builder подставит дефолтную электронную иконку и предупредит в логе.
+
+### Что делает первый запуск установленного приложения
+
+Установщик содержит сам Electron + UI и Python-исходники backend в `resources/backend/`. При первом старте:
+
+1. Electron ищет `python` / `pythonw` / `py -3` в PATH. Если ничего не найдено — показывает диалог "установите Python 3.11+".
+2. Проверяет, импортируется ли `minebridge_frp.app.api.main`.
+3. Если нет — показывает splash "Устанавливаем backend…" и выполняет `pip install --user --upgrade <bundled-backend-dir>`.
+4. После установки запускает backend через `pythonw` (без чёрного окна) и открывает основное окно.
+
+Последующие запуски стартуют сразу — backend уже установлен в пользовательском site-packages.
+
+### GitHub Releases
+
+Релизный workflow в [`.github/workflows/release.yml`](.github/workflows/release.yml). Срабатывает на push тега `v*.*.*`:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Action собирает Windows и Linux installer в параллельных matrix-job (`ubuntu-22.04` + `windows-latest`), прогоняет ruff + pytest перед сборкой, аплоадит артефакты и публикует их в GitHub Releases с автоматически сгенерированным changelog'ом из коммитов. Никаких секретов кроме встроенного `GITHUB_TOKEN` не требуется.
+
+Можно также запустить вручную через "Run workflow" во вкладке Actions без создания тега — артефакты тогда положатся в `Actions → Artifacts`, но релиз создан не будет.
 
 ## Тесты
 

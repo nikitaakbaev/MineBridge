@@ -10,6 +10,7 @@ build/
 *.egg-info/
 node_modules/
 dist-electron/
+dist-installer/
 .vite/
 .env
 .env.*

@@ -8,7 +8,11 @@
     "dev": "concurrently -k \"vite --host 127.0.0.1 --port 5173\" \"wait-on tcp:5173 && electron .\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
-    "backend": "minebridge-frp-api"
+    "backend": "minebridge-frp-api",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.7",
@@ -32,6 +36,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.0",
     "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2",
@@ -41,5 +46,88 @@
   "allowScripts": {
     "electron@33.4.11": true,
     "esbuild@0.25.12": true
+  },
+  "build": {
+    "appId": "com.minebridge.frp",
+    "productName": "MineBridge FRP",
+    "asar": true,
+    "directories": {
+      "output": "dist-installer",
+      "buildResources": "resources/icons"
+    },
+    "files": [
+      "electron/**/*",
+      "dist-electron/renderer/**/*",
+      "minebridge_frp/**/*",
+      "pyproject.toml",
+      "README.md",
+      "!**/__pycache__",
+      "!**/*.pyc",
+      "!**/*.pyo"
+    ],
+    "extraResources": [
+      {
+        "from": "minebridge_frp",
+        "to": "backend/minebridge_frp",
+        "filter": [
+          "**/*.py",
+          "**/*.toml",
+          "**/*.json",
+          "!**/__pycache__/**",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "pyproject.toml",
+        "to": "backend/pyproject.toml"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "MineBridge-FRP-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "MineBridge FRP"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Network",
+      "synopsis": "MineBridge FRP launcher",
+      "artifactName": "MineBridge-FRP-${version}-${arch}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    }
   }
 }

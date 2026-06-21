@@ -13,6 +13,7 @@ from minebridge_frp.app.services.metrics_service import MetricsSampler
 from minebridge_frp.app.services.minecraft_manager import MinecraftManager
 from minebridge_frp.app.services.password_vault import PasswordVault
 from minebridge_frp.app.services.profile_service import ProfileService
+from minebridge_frp.app.services.setup_state import SetupStateService
 from minebridge_frp.app.services.vps_manager import VpsManager
 
 
@@ -26,6 +27,7 @@ class BackendRuntime:
         self.minecraft_manager = MinecraftManager()
         self.frp_manager = FrpManager(context.data_dir / "frp")
         self.diagnostics_service = DiagnosticsService(context)
+        self.setup_state = SetupStateService(context)
         self.events = EventBus()
 
         self.minecraft_status = "idle"

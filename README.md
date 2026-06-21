@@ -1,167 +1,109 @@
 # MineBridge FRP
 
-MineBridge FRP is a desktop GUI app for running a Minecraft server on the user's PC and exposing it to friends through an FRP tunnel on a cheap VPS.
+> Десктопное приложение, чтобы открыть локальный Minecraft-сервер друзьям через FRP-туннель на дешёвой VPS — без проброса портов, без NAT-плясок, без отдельных консолей и батников.
 
-## Current Stage
+MineBridge FRP — это:
 
-Electron migration stage 1 is documented in
-[`docs/electron-migration-stage-1.md`](docs/electron-migration-stage-1.md). It maps the
-current PySide6 UI, services, models, dependencies, and the planned FastAPI + WebSocket
-bridge for the future Electron frontend.
+- **Electron-оболочка** (React + TypeScript + Vite) с тёмной темой, выезжающей консолью и линейным мастером первого запуска.
+- **Локальный FastAPI-бэкенд** (Python 3.11+, SQLAlchemy, Pydantic v2), который Electron поднимает автоматически.
+- **VPS-автоматизация** на paramiko: SSH-проверки, установка `frps`, генерация `frps.toml`, systemd-юнит, открытие портов через `ufw`/`firewalld`.
+- **Локальный `frpc`**: токен, конфиг, скачивание бинарника, запуск/остановка, проверка внешнего порта.
+- **Управление Minecraft-сервером**: запуск `.jar`, `.sh`, `.bash`, `.bat`, `.cmd`, `.ps1` без открытия лишних окон. Логи и команды — внутри встроенного xterm-терминала.
 
-Electron migration stages 2-3 are documented in
-[`docs/electron-migration-stage-2-3.md`](docs/electron-migration-stage-2-3.md). They add a
-UI-neutral process runner and the first local FastAPI backend for Electron.
+## Что нового в текущей версии
 
-Electron migration stages 4-5 are documented in
-[`docs/electron-migration-stage-4-5.md`](docs/electron-migration-stage-4-5.md). They add
-the Electron/Vite/React shell and the first migrated launcher screens.
+### Setup-мастер первого запуска
+Вместо 8 разрозненных вкладок — линейный мастер из 4 шагов: **VPS → Туннель → Сервер → Готово**. На каждом шаге всё автосохраняется при изменении полей (debounce 400ms), а единственная большая кнопка делает сразу всю установку:
+- "Проверить и установить frps" — `check-ssh → install-frps → firewall/open` за один клик.
+- "Скачать frpc и записать конфиг" — `generate-token → save → download → write config` за один клик.
+- "Принять EULA и записать server.properties" — `eula.txt + server.properties` сразу.
 
-Electron migration stage 6 is documented in
-[`docs/electron-migration-stage-6.md`](docs/electron-migration-stage-6.md). The Electron
-UI became the primary launch path.
+Состояние мастера живёт на бэкенде (`config_dir/setup.json`), поэтому смена машины или сброс localStorage не возвращает пользователя в начало.
 
-Electron migration stage 7 is documented in
-[`docs/electron-migration-stage-7.md`](docs/electron-migration-stage-7.md). The old
-PySide6 interface has been removed; Python now remains as the backend for the Electron UI.
+### Главный экран
+Одна большая карточка статуса: точка-индикатор, аптайм, число игроков, адрес `host:port` с кнопкой COPY и **один CTA** (Запустить / Остановить). Все редкие действия — в overflow-меню `⋮`. Под карточкой — 4 компактных квик-метрики (CPU / RAM / сеть / игроки) и выезжающая по `~` консоль сервера.
 
-Stage 1 is implemented:
+### Sidebar — 4 пункта вместо 8
+`Home / Настройка / Логи / Настройки`. Точка-индикатор у "Настройка" зажигается, если мастер не завершён.
 
-- project skeleton;
-- Python packaging config;
-- Electron application entry point;
-- React launcher with the required screens;
-- basic application logger;
-- placeholder widgets and tabs for later stages.
+### Поддержка скриптов и автодетект
+- **`.sh` / `.bat` / `.cmd` / `.ps1`** запускаются через детект OS, без всплывающих консольных окон (`CREATE_NO_WINDOW` на Windows, флаг `nogui` пробрасывается лаунчерам Forge/NeoForge/Paper).
+- **Автопоиск файла запуска** — после выбора папки сервера бэкенд сканирует её и предпочитает `run.sh`/`run.bat` поверх известных jar-имён. Скрипт побеждает, потому что у Forge именно он корректно поднимает мод-стек.
+- **Автопоиск Java** — обходит `JAVA_HOME`, `PATH`, типичные каталоги (`Program Files\Eclipse Adoptium\*`, `/usr/lib/jvm/*`, `/Library/Java/JavaVirtualMachines/*`, sdkman) и зовёт `-version` для каждой найденной. Если установок несколько — открывается модалка выбора.
 
-Stage 2 is implemented:
+## Архитектура
 
-- Pydantic models for profiles, VPS, Minecraft, tunnel, and diagnostics;
-- SQLite database with SQLAlchemy tables;
-- automatic default profile creation;
-- profile listing and active profile selection;
-- independent VPS, Minecraft, and frpc profile lists for mixing saved configurations;
-- profile presets can be created, renamed, deleted, and selected per workflow tab;
-- profile JSON import/export from the Quick Start tab.
+```
+┌──────────────────────────────────────┐
+│ Electron (main + preload)            │  IPC dialog.showOpenDialog
+│  └ React + Vite + TS                 │  Tailwind, framer-motion, xterm
+│     └ React Query + zustand          │
+└────────────┬─────────────────────────┘
+             │ HTTP + WebSocket
+             ▼
+┌──────────────────────────────────────┐
+│ FastAPI 127.0.0.1:47831              │
+│  ├ /api/setup/status                 │  ← состояние мастера
+│  ├ /api/profiles/{vps,mc,tunnels}    │
+│  ├ /api/vps/{check-ssh, install-frps}│
+│  ├ /api/frpc/{token, download, ...}  │
+│  ├ /api/minecraft/{detect-*, start}  │
+│  └ /ws/events                        │
+│                                      │
+│ services: profile, vps_manager,      │
+│ frp_manager, minecraft_manager,      │
+│ detection, diagnostics, metrics,     │
+│ password_vault, setup_state          │
+└──────────────────────────────────────┘
+```
 
-Stage 3 is implemented:
+База — SQLite (`SQLAlchemy 2`). Пароли VPS — шифрованный vault на `cryptography`. Бэкенд слушает только `127.0.0.1`, поэтому CORS открыт для `*` без credentials — снаружи он недоступен.
 
-- Minecraft tab is connected to the active profile;
-- Java discovery and version checks;
-- server folder and server.jar selection;
-- server.properties read/write helpers;
-- explicit EULA handling without silent acceptance;
-- local Minecraft server start/stop/restart through a Python subprocess runner;
-- realtime Minecraft log output and stdin command console.
+## Стек
 
-Stage 4 is implemented:
+- **Frontend**: Electron 33, Vite 6, React 18, TypeScript 5, zustand, @tanstack/react-query, framer-motion, recharts, @xterm/xterm, lucide-react, tailwindcss.
+- **Backend**: FastAPI, uvicorn, SQLAlchemy 2, Pydantic 2, paramiko, tomlkit, cryptography, psutil, platformdirs.
 
-- secure FRP token generation;
-- frpc.toml generation with tomlkit;
-- current OS/architecture detection for FRP assets;
-- FRP download and archive extraction helpers;
-- local frpc start/stop through a Python subprocess runner;
-- realtime frpc logs and external port checks.
-
-Stage 5 is implemented:
-
-- SSH connections to VPS through paramiko;
-- saved VPS passwords are encrypted locally with an app key in the config directory;
-- remote command execution with sudo support;
-- SFTP upload helpers;
-- remote frps.toml generation;
-- minebridge-frps systemd unit generation and installation;
-- frps start/stop/restart/status controls;
-- ufw/firewalld port opening without disabling the firewall;
-- full remote frps installation flow for Linux amd64 VPS hosts.
-
-Stage 6 is implemented as Electron workflow screens:
-
-- VPS screen manages SSH, remote frps install/config/systemd/firewall;
-- Minecraft screen manages the local server folder, server.properties, EULA, and Java process;
-- Tunnels screen manages the local frpc working folder, frpc.toml, binary download, launch, logs, and external port checks;
-- VPS, Minecraft, and frpc screens have separate profile selectors;
-- the old all-in-one Quick Start tab has been removed to keep each action explicit.
-
-Stage 7 is implemented:
-
-- Diagnostics tab runs active-profile checks in a background thread;
-- checks cover Java, server folder, server.jar, EULA, server.properties, ports, frpc, token, and VPS basics;
-- each result has OK / WARNING / ERROR status and a readable description;
-- safe fix actions are available for token generation, Java discovery, EULA opening, and server.properties generation;
-- diagnostics report summarizes all checks.
-
-Stage 8 is implemented:
-
-- status badges are used in runtime and diagnostics views;
-- the Electron interface uses a permanent dark launcher theme;
-- Electron main process owns desktop window lifecycle and single-instance behavior.
-
-Stage 9 is implemented:
-
-- unit tests cover frpc.toml generation;
-- unit tests cover frps.toml generation with and without dashboard settings;
-- server.properties parsing and formatting are covered by round-trip tests;
-- local port probing is covered with a socket listener test;
-- token generation and token validation are covered;
-- Pydantic profile, VPS, Minecraft, and tunnel model validation is covered;
-- profile import/export safety is covered by database-id cleanup tests.
-
-Stage 10 is implemented:
-
-- renderer build is provided through `npm run build`;
-- Python backend remains packageable through the Python project metadata;
-- builds must not bundle profile databases, FRP runtime downloads, `.env` files, or secrets.
-
-## Requirements
+## Требования
 
 - Python 3.11+
-- Node.js + npm for the Electron UI development checkout
-- Windows 10/11 or Linux x86_64
+- Node.js 18+ и npm
+- Windows 10/11 или Linux x86_64
+- Java 17+ (для запуска самого Minecraft-сервера; внутри приложения её можно автоматически найти)
+- VPS с Linux x86_64 и SSH (для размещения `frps`)
 
-## Install For Development
+## Установка для разработки
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate         # Windows: .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 npm install
 ```
 
-On Windows PowerShell:
+## Запуск
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
-npm install
-```
-
-## Run
+Полностью (Electron + бэкенд):
 
 ```bash
-minebridge-frp
+npm run dev          # dev-режим: Vite + Electron live-reload
+# или после установки python-пакета:
+minebridge-frp       # production-shell
 ```
 
-This starts the Electron UI. Electron starts the Python FastAPI backend automatically.
-
-Backend-only mode:
+Только бэкенд (полезно для отладки API):
 
 ```bash
 minebridge-frp-api
 ```
 
-## Desktop Launcher
-
-On Linux, install the app menu launcher:
+## Сборка
 
 ```bash
-scripts/install_desktop_launcher.sh
+npm run build        # tsc --noEmit + vite build → dist-electron/renderer/
 ```
 
-It creates `MineBridge FRP` in the application menu and uses the project `.venv` through `scripts/run_minebridge_frp.sh`, so the Electron app can be opened without typing a run command.
-
-## Test
+## Тесты
 
 ```bash
 python -m compileall minebridge_frp tests
@@ -169,20 +111,62 @@ ruff check .
 pytest
 ```
 
-## Build Electron Renderer
+В CI пайплайне 62 теста + 1 skipped. Ruff line-length 100, pyproject targets py311 (`E/F/I/UP/B`).
+
+## Linux desktop-launcher
 
 ```bash
-npm run build
+scripts/install_desktop_launcher.sh
 ```
 
-The renderer output folder is:
+Создаст пункт `MineBridge FRP` в меню приложений, использующий `.venv` через `scripts/run_minebridge_frp.sh`.
 
-```text
-dist-electron/renderer
+## Безопасность сборок
+
+В дистрибутивные артефакты **не должны** попадать:
+- `.minebridge-frp/` (профили и состояние мастера)
+- SQLite-базы и экспорты профилей
+- скачанные FRP-архивы/бинарники
+- `.env`, SSH-ключи, пароли
+
+## Структура проекта
+
 ```
+electron/
+├── main.cjs          Electron main process + IPC for native dialogs
+└── preload.cjs       contextBridge: window.minebridge
 
-Do not copy local runtime data into release builds. In particular, keep `.minebridge-frp/`, profile exports, SQLite databases, `.env` files, downloaded FRP archives/binaries, SSH keys, and passwords outside distributable artifacts.
+frontend/src/
+├── App.tsx
+├── components/
+│   ├── layout/       AppShell, Sidebar
+│   ├── setup/        StepNav, VpsStep, TunnelStep, ServerStep, DoneStep
+│   └── ui/           Card, Button, Console, ConsoleDrawer, OverflowMenu, JavaPicker, ...
+├── screens/          HomeScreen, SetupScreen, LogsScreen, SettingsScreen
+├── lib/              api, dialog, useDebouncedSave, types
+└── store/            zustand: setupStatus, consoleOpen, минимальный runtime state
+
+minebridge_frp/app/
+├── api/              FastAPI factory, schemas, runtime, events
+├── core/             AppContext, paths, exceptions, logger
+├── db/               SQLAlchemy models, migrations
+├── models/           Pydantic: setup, profile, minecraft, tunnel, vps, diagnostics
+├── services/         profile, vps_manager, frp_manager, minecraft_manager,
+│                     detection, diagnostics, metrics, password_vault, setup_state
+└── utils/            archive, ports, secrets, process, ...
+
+tests/                pytest, 62 кейса
+docs/                 миграция Qt → Electron (этапы 1–10)
+scripts/              run/install скрипты для Linux
+```
 
 ## Roadmap
 
-Future stages can add signed installers, automatic FRP update checks, richer remote diagnostics, and guided first-run setup.
+- Health-точки в sidebar для VPS / туннеля / Minecraft (P2).
+- Slim-mode tray-окно в стиле Tailscale (P3).
+- Подписанные установщики и автообновление `frps`/`frpc`.
+- Richer remote diagnostics (latency, версия `frps`, размер логов).
+
+## Лицензия
+
+MIT.

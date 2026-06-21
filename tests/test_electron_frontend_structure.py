@@ -19,12 +19,8 @@ def test_electron_package_scripts_and_dependencies_exist():
 
 def test_migrated_electron_screens_exist():
     screens = {
-        "DashboardScreen.tsx",
-        "ServersScreen.tsx",
-        "MinecraftScreen.tsx",
-        "TunnelsScreen.tsx",
-        "VpsScreen.tsx",
-        "DiagnosticsScreen.tsx",
+        "HomeScreen.tsx",
+        "SetupScreen.tsx",
         "LogsScreen.tsx",
         "SettingsScreen.tsx",
     }

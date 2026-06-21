@@ -14,10 +14,14 @@ from minebridge_frp.app.api.schemas import (
     CommandOutput,
     CommandRequest,
     CreateProfileRequest,
+    DetectLaunchersRequest,
+    JavaInstallationOut,
+    LauncherCandidateOut,
     RenameProfileRequest,
     SaveMinecraftProfileRequest,
     SaveTunnelProfileRequest,
     SaveVpsProfileRequest,
+    SetupStatusUpdate,
     VpsActionRequest,
 )
 from minebridge_frp.app.core.app_context import AppContext
@@ -29,6 +33,11 @@ from minebridge_frp.app.models.profile import (
     ProfileBundle,
     TunnelProfileBundle,
     VpsProfileBundle,
+)
+from minebridge_frp.app.models.setup import SetupState
+from minebridge_frp.app.services.detection import (
+    detect_java_installations,
+    detect_server_launchers,
 )
 
 
@@ -75,6 +84,17 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     @app.get("/api/metrics/snapshot")
     def metrics_snapshot() -> dict:
         return runtime.metrics.last_snapshot or {}
+
+    @app.get("/api/setup/status", response_model=SetupState)
+    def get_setup_status() -> SetupState:
+        return runtime.setup_state.load()
+
+    @app.post("/api/setup/status", response_model=SetupState)
+    def set_setup_status(payload: SetupStatusUpdate) -> SetupState:
+        return runtime.setup_state.update(
+            current_step=payload.current_step,
+            completed=payload.completed,
+        )
 
     @app.get("/api/profiles/active", response_model=ProfileBundle)
     def active_profile() -> ProfileBundle:
@@ -307,6 +327,31 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     def minecraft_command(payload: CommandRequest) -> ApiMessage:
         runtime.minecraft_manager.send_command(payload.command)
         return ApiMessage(message="Команда отправлена.")
+
+    @app.post(
+        "/api/minecraft/detect-launchers",
+        response_model=list[LauncherCandidateOut],
+    )
+    def detect_launchers(payload: DetectLaunchersRequest) -> list[LauncherCandidateOut]:
+        server_dir = payload.server_dir.strip()
+        if not server_dir:
+            raise ConfigurationError("Папка Minecraft-сервера не выбрана.")
+        candidates = detect_server_launchers(Path(server_dir))
+        return [
+            LauncherCandidateOut(path=c.path, kind=c.kind, score=c.score)
+            for c in candidates
+        ]
+
+    @app.post(
+        "/api/minecraft/detect-java",
+        response_model=list[JavaInstallationOut],
+    )
+    def detect_java() -> list[JavaInstallationOut]:
+        installations = detect_java_installations()
+        return [
+            JavaInstallationOut(path=item.path, version=item.version, vendor=item.vendor)
+            for item in installations
+        ]
 
     @app.post("/api/frpc/config", response_model=ApiMessage)
     def create_frpc_config() -> ApiMessage:

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require("electron");
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 
@@ -8,7 +8,12 @@ let mainWindow = null;
 
 function startBackend() {
   const customCommand = process.env.MINEBRIDGE_BACKEND_CMD;
-  const command = customCommand || process.env.PYTHON || "python3";
+  // On Windows, prefer pythonw.exe over python.exe so the embedded backend
+  // never pops up a black console window. Falls back to python3/python.
+  const command =
+    customCommand ||
+    process.env.PYTHON ||
+    (process.platform === "win32" ? "pythonw" : "python3");
   const args = customCommand ? [] : ["-m", "minebridge_frp.app.api.main"];
 
   backendProcess = spawn(command, args, {
@@ -18,7 +23,8 @@ function startBackend() {
       PYTHONUNBUFFERED: "1"
     },
     shell: Boolean(customCommand),
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
   });
 
   backendProcess.stdout.on("data", (chunk) => {
@@ -29,6 +35,10 @@ function startBackend() {
   });
   backendProcess.on("exit", (code) => {
     console.log(`[backend] exited with code ${code}`);
+    backendProcess = null;
+  });
+  backendProcess.on("error", (err) => {
+    console.error(`[backend] failed to spawn: ${err.message}`);
     backendProcess = null;
   });
 }
@@ -57,6 +67,32 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, "../dist-electron/renderer/index.html"));
   }
 }
+
+ipcMain.handle("minebridge:pick-directory", async (_event, options = {}) => {
+  const target = mainWindow ?? BrowserWindow.getFocusedWindow();
+  const result = await dialog.showOpenDialog(target, {
+    title: options.title || "Выберите папку",
+    defaultPath: options.defaultPath || undefined,
+    properties: ["openDirectory", "createDirectory"]
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle("minebridge:pick-file", async (_event, options = {}) => {
+  const target = mainWindow ?? BrowserWindow.getFocusedWindow();
+  const filters = Array.isArray(options.filters) && options.filters.length > 0
+    ? options.filters
+    : [{ name: "Все файлы", extensions: ["*"] }];
+  const result = await dialog.showOpenDialog(target, {
+    title: options.title || "Выберите файл",
+    defaultPath: options.defaultPath || undefined,
+    filters,
+    properties: ["openFile"]
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {

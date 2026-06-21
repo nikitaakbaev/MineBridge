@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from minebridge_frp.app.core.exceptions import ServiceError
@@ -41,14 +42,42 @@ class ProcessRunner:
         program: str | Path,
         arguments: Sequence[str],
         working_directory: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> None:
+        self.start_command(
+            [str(program), *arguments],
+            working_directory=working_directory,
+            env=env,
+        )
+
+    def start_command(
+        self,
+        command: Sequence[str],
+        working_directory: str | Path | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> None:
         with self._lock:
             if self.is_running:
                 raise ServiceError("Процесс уже запущен.")
 
+            popen_env: dict[str, str] | None = None
+            if env:
+                popen_env = os.environ.copy()
+                popen_env.update({str(k): str(v) for k, v in env.items()})
+
+            popen_kwargs: dict[str, object] = {}
+            if os.name == "nt":
+                # Hide the extra Windows console window that ``cmd /c run.bat``
+                # would otherwise pop up. The child still has stdin/stdout
+                # piped back to us through the parent process — visible inside
+                # the app's xterm console.
+                popen_kwargs["creationflags"] = (
+                    subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+                )
+
             try:
                 self.process = subprocess.Popen(
-                    [str(program), *arguments],
+                    list(command),
                     cwd=str(working_directory) if working_directory is not None else None,
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
@@ -57,6 +86,8 @@ class ProcessRunner:
                     encoding="utf-8",
                     errors="replace",
                     bufsize=1,
+                    env=popen_env,
+                    **popen_kwargs,
                 )
             except OSError as exc:
                 self.process = None

@@ -1,34 +1,20 @@
-import {
-  Activity,
-  Boxes,
-  Gauge,
-  Home,
-  ListChecks,
-  Monitor,
-  ScrollText,
-  Server,
-  Settings,
-  Waypoints
-} from "lucide-react";
+import { Activity, Gauge, Home, ScrollText, Settings, Wand2 } from "lucide-react";
 
 import type { ScreenId } from "../../lib/types";
 import { useAppStore } from "../../store/app-store";
 
 const items: Array<{ id: ScreenId; label: string; icon: typeof Home }> = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "servers", label: "Servers", icon: Boxes },
-  { id: "minecraft", label: "Minecraft", icon: Monitor },
-  { id: "tunnels", label: "Tunnels", icon: Waypoints },
-  { id: "vps", label: "VPS", icon: Server },
-  { id: "diagnostics", label: "Diagnostics", icon: ListChecks },
-  { id: "logs", label: "Logs", icon: ScrollText },
-  { id: "settings", label: "Settings", icon: Settings }
+  { id: "home", label: "Home", icon: Home },
+  { id: "setup", label: "Настройка", icon: Wand2 },
+  { id: "logs", label: "Логи", icon: ScrollText },
+  { id: "settings", label: "Настройки", icon: Settings }
 ];
 
 export function Sidebar() {
   const activeScreen = useAppStore((state) => state.activeScreen);
   const setActiveScreen = useAppStore((state) => state.setActiveScreen);
   const connected = useAppStore((state) => state.backendConnected);
+  const setupStatus = useAppStore((state) => state.setupStatus);
 
   return (
     <aside className="sidebar">
@@ -45,6 +31,7 @@ export function Sidebar() {
       <nav className="nav-list">
         {items.map((item) => {
           const Icon = item.icon;
+          const showSetupHint = item.id === "setup" && setupStatus && !setupStatus.completed;
           return (
             <button
               key={item.id}
@@ -53,6 +40,7 @@ export function Sidebar() {
             >
               <Icon size={18} />
               <span>{item.label}</span>
+              {showSetupHint && <em className="nav-dot" aria-label="требуется настройка" />}
             </button>
           );
         })}

@@ -21,6 +21,7 @@ import { formatDuration, formatMb, useUptime } from "../lib/format";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { OverflowMenu } from "../components/ui/OverflowMenu";
+import { Sparkline } from "../components/ui/Sparkline";
 import { useAppStore } from "../store/app-store";
 
 export function HomeScreen() {
@@ -29,6 +30,7 @@ export function HomeScreen() {
   const minecraftStatus = useAppStore((state) => state.minecraftStatus);
   const frpcStatus = useAppStore((state) => state.frpcStatus);
   const latest = useAppStore((state) => state.latest);
+  const metrics = useAppStore((state) => state.metrics);
   const playerCount = useAppStore((state) => state.playerCount);
   const players = useAppStore((state) => state.players);
   const serverStartedAt = useAppStore((state) => state.serverStartedAt);
@@ -36,6 +38,11 @@ export function HomeScreen() {
   const setActiveScreen = useAppStore((state) => state.setActiveScreen);
   const setConsoleOpen = useAppStore((state) => state.setConsoleOpen);
   const uptime = useUptime(serverStartedAt);
+
+  const cpuSeries = metrics.map((m) => m.cpu ?? 0);
+  const ramSeries = metrics.map((m) => m.ram_percent ?? 0);
+  const netDownSeries = metrics.map((m) => m.net_down_kbps ?? 0);
+  const playerSeries = metrics.map((m) => m.players ?? 0);
 
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -233,6 +240,7 @@ export function HomeScreen() {
             <span>CPU сервера</span>
           </div>
           <strong>{latest?.server_cpu ?? 0}%</strong>
+          <Sparkline values={cpuSeries} color="#60a5fa" domainMin={0} domainMax={100} />
           <p className="muted">система {latest?.cpu ?? 0}%</p>
         </Card>
         <Card className="home-quick-card">
@@ -241,6 +249,7 @@ export function HomeScreen() {
             <span>RAM сервера</span>
           </div>
           <strong>{latest ? formatMb(latest.server_ram_mb) : "0 МБ"}</strong>
+          <Sparkline values={ramSeries} color="#34d399" domainMin={0} domainMax={100} />
           <p className="muted">
             {ramTotalMb > 0
               ? `${formatMb(ramUsedMb)} / ${formatMb(ramTotalMb)}`
@@ -253,6 +262,7 @@ export function HomeScreen() {
             <span>Сеть</span>
           </div>
           <strong>{latest?.net_down_kbps ?? 0} КБ/с</strong>
+          <Sparkline values={netDownSeries} color="#a78bfa" />
           <p className="muted">↑ {latest?.net_up_kbps ?? 0} КБ/с</p>
         </Card>
         <Card className="home-quick-card">
@@ -261,6 +271,7 @@ export function HomeScreen() {
             <span>Игроки</span>
           </div>
           <strong>{playerCount}</strong>
+          <Sparkline values={playerSeries} color="#f59e0b" domainMin={0} />
           <p className="muted">{players.length ? players.join(", ") : "никого"}</p>
         </Card>
       </div>

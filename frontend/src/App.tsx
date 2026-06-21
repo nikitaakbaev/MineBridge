@@ -36,10 +36,14 @@ export function App() {
   useEffect(() => {
     if (!setupQuery.data) return;
     setSetupStatus(setupQuery.data);
-    if (!setupStatus && !setupQuery.data.completed) {
-      setActiveScreen("setup");
-    }
-  }, [setupQuery.data, setupStatus, setSetupStatus, setActiveScreen]);
+  }, [setupQuery.data, setSetupStatus]);
+
+  // First-load redirect: only when we don't yet know setup state at all.
+  useEffect(() => {
+    if (setupStatus !== null) return;
+    if (!setupQuery.data) return;
+    if (!setupQuery.data.completed) setActiveScreen("setup");
+  }, [setupQuery.data, setupStatus, setActiveScreen]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {

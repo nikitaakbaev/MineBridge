@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Terminal, X } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { api } from "../../lib/api";
@@ -11,10 +12,23 @@ export function ConsoleDrawer() {
   const setOpen = useAppStore((state) => state.setConsoleOpen);
   const minecraftLogs = useAppStore((state) => state.minecraftLogs);
   const minecraftStatus = useAppStore((state) => state.minecraftStatus);
+  const hostRef = useRef<HTMLDivElement | null>(null);
 
   const send = useMutation({
     mutationFn: (command: string) => api.sendMinecraftCommand(command)
   });
+
+  useEffect(() => {
+    if (!open) return;
+    // Give xterm time to mount before focusing it.
+    const id = window.setTimeout(() => {
+      const term = hostRef.current?.querySelector(".xterm-helper-textarea") as
+        | HTMLTextAreaElement
+        | null;
+      term?.focus();
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -25,6 +39,13 @@ export function ConsoleDrawer() {
           animate={{ y: 0 }}
           exit={{ y: 280 }}
           transition={{ duration: 0.2 }}
+          ref={hostRef}
+          onMouseDown={() => {
+            const term = hostRef.current?.querySelector(".xterm-helper-textarea") as
+              | HTMLTextAreaElement
+              | null;
+            term?.focus();
+          }}
         >
           <div className="console-drawer-header">
             <div className="console-drawer-title">

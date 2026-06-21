@@ -8,7 +8,12 @@ let mainWindow = null;
 
 function startBackend() {
   const customCommand = process.env.MINEBRIDGE_BACKEND_CMD;
-  const command = customCommand || process.env.PYTHON || "python3";
+  // On Windows, prefer pythonw.exe over python.exe so the embedded backend
+  // never pops up a black console window. Falls back to python3/python.
+  const command =
+    customCommand ||
+    process.env.PYTHON ||
+    (process.platform === "win32" ? "pythonw" : "python3");
   const args = customCommand ? [] : ["-m", "minebridge_frp.app.api.main"];
 
   backendProcess = spawn(command, args, {
@@ -18,7 +23,8 @@ function startBackend() {
       PYTHONUNBUFFERED: "1"
     },
     shell: Boolean(customCommand),
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
   });
 
   backendProcess.stdout.on("data", (chunk) => {
@@ -29,6 +35,10 @@ function startBackend() {
   });
   backendProcess.on("exit", (code) => {
     console.log(`[backend] exited with code ${code}`);
+    backendProcess = null;
+  });
+  backendProcess.on("error", (err) => {
+    console.error(`[backend] failed to spawn: ${err.message}`);
     backendProcess = null;
   });
 }

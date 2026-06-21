@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Play, Sparkles } from "lucide-react";
 
 import { api } from "../../lib/api";
+import type { SetupState } from "../../lib/types";
 import { useAppStore } from "../../store/app-store";
 import { Button } from "../ui/Button";
 
 export function DoneStep() {
+  const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ["active-profile"], queryFn: api.activeProfile });
   const setActiveScreen = useAppStore((state) => state.setActiveScreen);
   const setSetupStatus = useAppStore((state) => state.setSetupStatus);
@@ -15,9 +17,14 @@ export function DoneStep() {
       await api.startMinecraft();
       await api.startFrpc();
       const next = await api.setSetupStatus({ completed: true, current_step: "done" });
-      setSetupStatus(next);
+      return next;
     },
-    onSuccess: () => setActiveScreen("home")
+    onSuccess: (next: SetupState) => {
+      setSetupStatus(next);
+      queryClient.setQueryData(["setup-status"], next);
+      queryClient.invalidateQueries({ queryKey: ["setup-status"] });
+      setActiveScreen("home");
+    }
   });
 
   const address = profile.data?.vps.host

@@ -1058,6 +1058,64 @@ code {
   display: block;
 }
 
+.terminal-split {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.terminal-input-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(125, 211, 252, 0.05);
+}
+
+.terminal-prompt {
+  color: #7dd3fc;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  color: #f1f5f9;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  padding: 4px 0;
+  outline: none;
+}
+
+.terminal-input::placeholder {
+  color: #64748b;
+}
+
+.terminal-input:disabled {
+  color: #475569;
+}
+
+.terminal-send {
+  background: rgba(125, 211, 252, 0.18);
+  color: #f1f5f9;
+  border: 1px solid rgba(125, 211, 252, 0.4);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.terminal-send:hover:not(:disabled) {
+  background: rgba(125, 211, 252, 0.28);
+}
+
+.terminal-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .home-secondary-row {
   display: flex;
   justify-content: space-between;

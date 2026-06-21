@@ -20,12 +20,11 @@ export function ConsoleDrawer() {
 
   useEffect(() => {
     if (!open) return;
-    // Give xterm time to mount before focusing it.
     const id = window.setTimeout(() => {
-      const term = hostRef.current?.querySelector(".xterm-helper-textarea") as
-        | HTMLTextAreaElement
+      const input = hostRef.current?.querySelector(".terminal-input") as
+        | HTMLInputElement
         | null;
-      term?.focus();
+      input?.focus();
     }, 60);
     return () => window.clearTimeout(id);
   }, [open]);
@@ -41,10 +40,10 @@ export function ConsoleDrawer() {
           transition={{ duration: 0.2 }}
           ref={hostRef}
           onMouseDown={() => {
-            const term = hostRef.current?.querySelector(".xterm-helper-textarea") as
-              | HTMLTextAreaElement
+            const input = hostRef.current?.querySelector(".terminal-input") as
+              | HTMLInputElement
               | null;
-            term?.focus();
+            input?.focus();
           }}
         >
           <div className="console-drawer-header">
@@ -67,6 +66,7 @@ export function ConsoleDrawer() {
             onSubmit={(command) => send.mutate(command)}
             disabled={minecraftStatus !== "running"}
             disabledHint="запустите сервер, чтобы вводить команды"
+            inputPosition="top"
           />
         </motion.div>
       )}

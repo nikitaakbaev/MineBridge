@@ -5,9 +5,9 @@
 MineBridge FRP — это:
 
 - **Electron-оболочка** (React + TypeScript + Vite) с тёмной темой, выезжающей консолью и линейным мастером первого запуска.
-- **Локальный FastAPI-бэкенд** (Python 3.11+, SQLAlchemy, Pydantic v2), который Electron поднимает автоматически.
+- **Локальный FastAPI-бэкенд** (FastAPI, SQLAlchemy, Pydantic v2), который Electron поднимает автоматически. В релизных сборках он упакован в отдельный PyInstaller-бинарник, поэтому пользователю не нужен установленный Python.
 - **VPS-автоматизация** на paramiko: SSH-проверки, установка `frps`, генерация `frps.toml`, systemd-юнит, открытие портов через `ufw`/`firewalld`.
-- **Локальный `frpc`**: токен, конфиг, скачивание бинарника, запуск/остановка, проверка внешнего порта.
+- **Локальный `frpc`**: токен, конфиг, скачивание зафиксированной версии FRP (`v0.69.1`), запуск/остановка, проверка внешнего порта.
 - **Управление Minecraft-сервером**: запуск `.jar`, `.sh`, `.bash`, `.bat`, `.cmd`, `.ps1` без открытия лишних окон. Логи и команды — внутри встроенного xterm-терминала.
 
 ## Что нового в текущей версии
@@ -57,16 +57,17 @@ MineBridge FRP — это:
 └──────────────────────────────────────┘
 ```
 
-База — SQLite (`SQLAlchemy 2`). Пароли VPS — шифрованный vault на `cryptography`. Бэкенд слушает только `127.0.0.1`, поэтому CORS открыт для `*` без credentials — снаружи он недоступен.
+База — SQLite (`SQLAlchemy 2`). Пароли VPS — шифрованный vault на `cryptography`. Бэкенд слушает только `127.0.0.1`; в Electron-сессии main process генерирует runtime API token, передаёт его backend через `MINEBRIDGE_API_TOKEN`, а renderer добавляет `X-MineBridge-Token` для HTTP и query-token для WebSocket.
 
 ## Стек
 
 - **Frontend**: Electron 33, Vite 6, React 18, TypeScript 5, zustand, @tanstack/react-query, framer-motion, recharts, @xterm/xterm, lucide-react, tailwindcss.
 - **Backend**: FastAPI, uvicorn, SQLAlchemy 2, Pydantic 2, paramiko, tomlkit, cryptography, psutil, platformdirs.
+- **Release backend bundle**: PyInstaller one-file executable in `resources/backend-bin/`.
 
 ## Требования
 
-- Python 3.11+
+- Python 3.11+ (только для разработки и сборки; пользователям релизного installer Python не нужен)
 - Node.js 18+ и npm
 - Windows 10/11 или Linux x86_64
 - Java 17+ (для запуска самого Minecraft-сервера; внутри приложения её можно автоматически найти)
@@ -103,6 +104,7 @@ Renderer (для разработки):
 
 ```bash
 npm run build        # tsc --noEmit + vite build → dist-electron/renderer/
+npm run build:backend # PyInstaller → dist-backend/minebridge-frp-api(.exe)
 ```
 
 ### Сборка установщика (npm package)
@@ -122,41 +124,52 @@ npm run dist:dir     # без архива — папка с готовым пр
 - **Windows**: `MineBridge-FRP-<version>-x64.exe` (NSIS-инсталлятор) + `MineBridge-FRP-<version>-x64.exe` (portable).
 - **Linux**: `MineBridge-FRP-<version>-x64.AppImage` (запускается двойным кликом) + `MineBridge-FRP-<version>-x64.deb`.
 
-Иконки лежат в [`resources/icons/`](resources/icons/) — туда нужно положить `icon.ico` (Windows, 256×256) и `icon.png` 512×512 (Linux). Если файлов нет, electron-builder подставит дефолтную электронную иконку и предупредит в логе.
+Иконки лежат в [`resources/icons/`](resources/icons/): `icon.ico` для Windows и `icon.png` 512×512 для Linux. Перегенерировать их из текущего векторного стиля можно командой:
+
+```bash
+python scripts/generate_icons.py
+```
 
 ### Что делает первый запуск установленного приложения
 
-Установщик содержит сам Electron + UI и Python-исходники backend в `resources/backend/`. При первом старте:
+Установщик содержит Electron + UI и готовый backend executable в `resources/backend-bin/`. При старте:
 
-1. Electron ищет `python` / `pythonw` / `py -3` в PATH. Если ничего не найдено — показывает диалог "установите Python 3.11+".
-2. Проверяет, импортируется ли `minebridge_frp.app.api.main`.
-3. Если нет — показывает splash "Устанавливаем backend…" и выполняет `pip install --user --upgrade <bundled-backend-dir>`.
-4. После установки запускает backend через `pythonw` (без чёрного окна) и открывает основное окно.
+1. Electron генерирует случайный API token для текущей сессии.
+2. Запускает `resources/backend-bin/minebridge-frp-api(.exe)` с `MINEBRIDGE_API_TOKEN`.
+3. Передаёт token renderer через preload (`window.minebridge.apiToken`).
+4. Renderer обращается к backend только с этим token.
 
-Последующие запуски стартуют сразу — backend уже установлен в пользовательском site-packages.
+Fallback через пользовательский Python и `pip install --user` оставлен только для dev/старых unpacked-сборок, где `backend-bin` отсутствует.
 
 ### GitHub Releases
 
 Релизный workflow в [`.github/workflows/release.yml`](.github/workflows/release.yml). Срабатывает на push тега `v*.*.*`:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+npm version <version> --no-git-tag-version
+# вручную синхронизировать pyproject.toml и minebridge_frp/__init__.py
+python -m ruff check minebridge_frp tests scripts
+python -m pytest tests -q
+npm run build
+
+git commit -am "Release v<version>"
+git tag v<version>
+git push origin main --tags
 ```
 
-Action собирает Windows и Linux installer в параллельных matrix-job (`ubuntu-22.04` + `windows-latest`), прогоняет ruff + pytest перед сборкой, аплоадит артефакты и публикует их в GitHub Releases с автоматически сгенерированным changelog'ом из коммитов. Никаких секретов кроме встроенного `GITHUB_TOKEN` не требуется.
+Action собирает Windows и Linux installer в параллельных matrix-job (`ubuntu-22.04` + `windows-latest`): ставит Python dev dependencies, прогоняет ruff + pytest, собирает renderer, собирает bundled backend через PyInstaller, запускает electron-builder, аплоадит артефакты и публикует их в GitHub Releases с автоматически сгенерированным changelog'ом из коммитов. Никаких секретов кроме встроенного `GITHUB_TOKEN` не требуется.
 
 Можно также запустить вручную через "Run workflow" во вкладке Actions без создания тега — артефакты тогда положатся в `Actions → Artifacts`, но релиз создан не будет.
 
 ## Тесты
 
 ```bash
-python -m compileall minebridge_frp tests
-ruff check .
-pytest
+python -m ruff check minebridge_frp tests scripts
+python -m pytest tests -q
+npm run build
 ```
 
-В CI пайплайне 62 теста + 1 skipped. Ruff line-length 100, pyproject targets py311 (`E/F/I/UP/B`).
+В CI пайплайне 66 тестов + 1 skipped. Ruff line-length 100, pyproject targets py311 (`E/F/I/UP/B`).
 
 ## Linux desktop-launcher
 
@@ -172,6 +185,7 @@ scripts/install_desktop_launcher.sh
 - `.minebridge-frp/` (профили и состояние мастера)
 - SQLite-базы и экспорты профилей
 - скачанные FRP-архивы/бинарники
+- `dist-backend/`, `dist-electron/`, `dist-installer/`, `build/`
 - `.env`, SSH-ключи, пароли
 
 ## Структура проекта
@@ -200,9 +214,9 @@ minebridge_frp/app/
 │                     detection, diagnostics, metrics, password_vault, setup_state
 └── utils/            archive, ports, secrets, process, ...
 
-tests/                pytest, 62 кейса
+tests/                pytest, 66 кейсов
 docs/                 миграция Qt → Electron (этапы 1–10)
-scripts/              run/install скрипты для Linux
+scripts/              run/install скрипты для Linux, generate_icons.py
 ```
 
 ## Roadmap

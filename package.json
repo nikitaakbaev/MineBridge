@@ -1,6 +1,6 @@
 {
   "name": "minebridge-frp-electron",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Electron + React frontend for MineBridge FRP.",
   "author": {

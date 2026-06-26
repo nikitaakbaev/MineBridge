@@ -11,7 +11,7 @@ import paramiko
 
 from minebridge_frp.app.core.exceptions import ConfigurationError, ServiceError
 from minebridge_frp.app.models.vps import VpsConfig
-from minebridge_frp.app.services.download_service import DownloadService
+from minebridge_frp.app.services.download_service import DEFAULT_FRP_VERSION, DownloadService
 from minebridge_frp.app.services.firewall_service import (
     firewall_detection_command,
     firewall_open_port_command,
@@ -253,7 +253,7 @@ class VpsManager:
         command = f"""
 set -eu
 remote_dir={shlex.quote(remote_dir)}
-api_url=https://api.github.com/repos/fatedier/frp/releases/latest
+api_url=https://api.github.com/repos/fatedier/frp/releases/tags/{DEFAULT_FRP_VERSION}
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 mkdir -p "$remote_dir"

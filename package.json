@@ -5,7 +5,7 @@
   "description": "Electron + React frontend for MineBridge FRP.",
   "author": {
     "name": "MineBridge FRP Contributors",
-    "email": "noreply@minebridge.local"
+    "email": "nikitaakbaev@users.noreply.github.com"
   },
   "main": "electron/main.cjs",
   "scripts": {
@@ -99,6 +99,7 @@
       }
     ],
     "win": {
+      "icon": "resources/icons/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -139,7 +140,8 @@
       ],
       "category": "Network",
       "synopsis": "MineBridge FRP launcher",
-      "maintainer": "MineBridge FRP Contributors <noreply@minebridge.local>",
+      "maintainer": "MineBridge FRP Contributors <nikitaakbaev@users.noreply.github.com>",
+      "icon": "resources/icons/icon.png",
       "artifactName": "MineBridge-FRP-${version}-${arch}.${ext}"
     },
     "publish": {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tomllib
 
 from minebridge_frp.app.models.tunnel import TunnelConfig
+from minebridge_frp.app.services.download_service import DEFAULT_FRP_VERSION, DownloadService
 from minebridge_frp.app.services.frp_manager import create_frpc_toml, create_frps_toml
 from minebridge_frp.app.utils.secrets import generate_token
 
@@ -88,4 +89,26 @@ def test_create_frpc_toml_uses_configured_ports_and_token():
             "localPort": 25570,
             "remotePort": 25580,
         }
+    ]
+
+
+def test_download_service_uses_pinned_frp_release_by_default(tmp_path, monkeypatch):
+    seen: list[str] = []
+
+    class Response:
+        status_code = 200
+
+        def json(self) -> dict:
+            return {"tag_name": DEFAULT_FRP_VERSION, "assets": []}
+
+    def fake_get(url: str, timeout: int):
+        seen.append(url)
+        return Response()
+
+    monkeypatch.setattr("minebridge_frp.app.services.download_service.requests.get", fake_get)
+
+    DownloadService(tmp_path)._fetch_release(DEFAULT_FRP_VERSION)
+
+    assert seen == [
+        f"https://api.github.com/repos/fatedier/frp/releases/tags/{DEFAULT_FRP_VERSION}"
     ]

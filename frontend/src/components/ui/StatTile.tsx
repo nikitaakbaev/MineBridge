@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { MetricsSample } from "../../lib/types";
-import { Sparkline } from "./charts";
+import { Sparkline } from "./Sparkline";
 
 type StatTileProps = {
   icon: ReactNode;
@@ -26,7 +26,7 @@ export function StatTile({ icon, label, value, hint, accent = "#60a5fa", data, d
       {hint && <div className="stat-hint">{hint}</div>}
       {data && dataKey && data.length > 1 && (
         <div className="stat-spark">
-          <Sparkline data={data} dataKey={dataKey} color={accent} />
+          <Sparkline values={data.map((point) => Number(point[dataKey]) || 0)} color={accent} />
         </div>
       )}
     </div>

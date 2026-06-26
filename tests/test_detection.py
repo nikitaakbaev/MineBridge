@@ -58,7 +58,7 @@ def test_detect_java_installations_deduplicates_and_sorts(tmp_path: Path):
     candidates = iter([j17, j17, j21])
 
     def fake_version(path: Path) -> str:
-        return "21.0.2" if "21" in str(path) else "17.0.10"
+        return "21.0.2" if path.parent.parent.name == "java21" else "17.0.10"
 
     with patch(
         "minebridge_frp.app.services.detection._candidate_java_paths",

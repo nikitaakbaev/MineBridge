@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from minebridge_frp.app.models.vps import VpsConfig
+from minebridge_frp.app.services.download_service import DEFAULT_FRP_VERSION
 from minebridge_frp.app.services.firewall_service import (
     firewall_detection_command,
     firewall_open_port_command,
@@ -86,7 +87,7 @@ def test_vps_remote_download_install_uses_github_asset_on_server():
     manager._install_linux_frps_binary_remote_download()
 
     command = manager.fake_client.commands[0]
-    assert "api.github.com/repos/fatedier/frp/releases/latest" in command
+    assert f"api.github.com/repos/fatedier/frp/releases/tags/{DEFAULT_FRP_VERSION}" in command
     assert "grep linux_amd64" in command
     assert "curl -fL" in command
     assert 'install -m 0755 "$frps_path" "$remote_dir/frps"' in command

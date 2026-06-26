@@ -17,6 +17,13 @@ def test_electron_package_scripts_and_dependencies_exist():
     assert package["dependencies"]["recharts"]
 
 
+def test_vite_splits_recharts_chunk():
+    source = Path("vite.config.ts").read_text(encoding="utf-8")
+
+    assert "manualChunks" in source
+    assert 'charts: ["recharts"]' in source
+
+
 def test_electron_backend_uses_sibling_python_exe_for_pythonw():
     source = Path("electron/backend.cjs").read_text(encoding="utf-8")
 

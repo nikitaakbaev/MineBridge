@@ -7,7 +7,14 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "../dist-electron/renderer",
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          charts: ["recharts"]
+        }
+      }
+    }
   },
   server: {
     host: "127.0.0.1",

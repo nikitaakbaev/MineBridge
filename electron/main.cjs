@@ -75,14 +75,17 @@ async function ensureBackendReady() {
   if (!python) {
     dialog.showErrorBox(
       "Python не найден",
-      "MineBridge требует Python 3.11+ в PATH. Установите его с https://www.python.org/downloads/ и запустите приложение снова."
+      "MineBridge требует Python 3.11+ в PATH.\n\n" +
+        "1) Скачайте с https://www.python.org/downloads/ (версия 3.11 или 3.12, не 3.13+).\n" +
+        '2) При установке отметьте "Add python.exe to PATH".\n' +
+        "3) Запустите MineBridge снова."
     );
     app.quit();
     return null;
   }
 
   if (!isBackendInstalled(python)) {
-    showSplash("Устанавливаем backend…");
+    showSplash("Устанавливаем backend (это занимает 30-60 секунд)…");
     const dir = bundledBackendDir();
     if (!fs.existsSync(path.join(dir, "pyproject.toml"))) {
       dialog.showErrorBox(
@@ -95,19 +98,31 @@ async function ensureBackendReady() {
     try {
       await installBackend(python, dir, (line) => {
         if (splashWindow) {
+          const last = String(line).trim().split(/\r?\n/).slice(-1)[0] || "…";
           splashWindow.webContents
             .executeJavaScript(
-              `document.getElementById("splash-message").textContent = ${JSON.stringify(
-                String(line).trim().split(/\r?\n/).slice(-1)[0] || "…"
-              )};`
+              `document.getElementById("splash-message").textContent = ${JSON.stringify(last)};`
             )
             .catch(() => {});
         }
       });
     } catch (err) {
+      const logTail = (err.log || String(err.message || err))
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .slice(-25)
+        .join("\n");
+      const logPath = path.join(app.getPath("userData"), "pip-install-error.log");
+      try {
+        fs.writeFileSync(logPath, err.log || String(err.message || err), "utf8");
+      } catch {
+        /* best-effort */
+      }
       dialog.showErrorBox(
         "Не удалось установить backend",
-        String(err && err.message ? err.message : err)
+        `Python: ${python.version || python.command}\n` +
+          `Полный лог: ${logPath}\n\n` +
+          `Последние строки:\n${logTail}`
       );
       app.quit();
       return null;

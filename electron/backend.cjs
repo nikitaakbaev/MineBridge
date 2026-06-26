@@ -6,28 +6,43 @@ const path = require("node:path");
 /**
  * Locate a Python interpreter on the user's PATH.
  *
- * Returns the python command string ("python3", "python", "py -3") or null if
- * none is reachable. We try the GUI-friendly variants (pythonw / py -3) first
- * for Windows so that no console window flashes when we eventually spawn the
- * backend.
+ * Returns an object with both a GUI-friendly command (used for the long-lived
+ * backend so no console window appears) and a console command (used for
+ * pip install — pythonw can choke on pip's progress bars / stderr buffering).
+ * Returns null if no interpreter is reachable.
  */
 function findPython() {
-  const candidates =
-    process.platform === "win32"
-      ? ["pythonw", "python", "py"]
-      : ["python3", "python"];
+  const isWindows = process.platform === "win32";
+  const candidates = isWindows ? ["pythonw", "python", "py"] : ["python3", "python"];
 
   for (const cmd of candidates) {
     const args = cmd === "py" ? ["-3", "--version"] : ["--version"];
     const result = spawnSync(cmd, args, { windowsHide: true });
-    if (result.status === 0) return { command: cmd, prefixArgs: cmd === "py" ? ["-3"] : [] };
+    if (result.status !== 0) continue;
+
+    const prefixArgs = cmd === "py" ? ["-3"] : [];
+    let pipCommand = cmd;
+    let pipPrefixArgs = prefixArgs;
+
+    if (isWindows && cmd === "pythonw") {
+      // pythonw works for the long-lived daemon, but pip install does better
+      // through console python.exe — same directory, real stderr stream.
+      const console = spawnSync("python", ["--version"], { windowsHide: true });
+      if (console.status === 0) {
+        pipCommand = "python";
+        pipPrefixArgs = [];
+      }
+    }
+
+    const version = (result.stdout?.toString() || result.stderr?.toString() || "").trim();
+
+    return { command: cmd, prefixArgs, pipCommand, pipPrefixArgs, version };
   }
   return null;
 }
 
 /**
- * Check whether ``minebridge-frp-api`` (and therefore the Python package) is
- * already installed by importing the backend module.
+ * Check whether the backend Python package is already importable.
  */
 function isBackendInstalled(python) {
   if (!python) return false;
@@ -40,30 +55,47 @@ function isBackendInstalled(python) {
 }
 
 /**
- * Run ``pip install -e <bundled-backend-dir>`` to install the backend on first
- * launch. Output is forwarded to ``onLog`` for the splash screen.
+ * Run ``pip install`` to install the backend on first launch. Buffers full
+ * output and includes it in the rejection error so the caller can show it
+ * to the user.
  */
 function installBackend(python, backendDir, onLog) {
   return new Promise((resolve, reject) => {
     const args = [
-      ...python.prefixArgs,
+      ...python.pipPrefixArgs,
       "-m",
       "pip",
       "install",
       "--user",
       "--upgrade",
+      "--disable-pip-version-check",
+      "--no-warn-script-location",
       backendDir
     ];
-    const child = spawn(python.command, args, {
+    const child = spawn(python.pipCommand, args, {
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"]
     });
-    child.stdout.on("data", (chunk) => onLog?.(chunk.toString()));
-    child.stderr.on("data", (chunk) => onLog?.(chunk.toString()));
-    child.on("error", reject);
+
+    const buffer = [];
+    const collect = (chunk) => {
+      const text = chunk.toString();
+      buffer.push(text);
+      onLog?.(text);
+    };
+    child.stdout.on("data", collect);
+    child.stderr.on("data", collect);
+
+    child.on("error", (err) => {
+      const error = new Error(`Не удалось запустить pip: ${err.message}`);
+      error.log = buffer.join("");
+      reject(error);
+    });
     child.on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`pip install exited with code ${code}`));
+      if (code === 0) return resolve();
+      const error = new Error(`pip install завершился с кодом ${code}`);
+      error.log = buffer.join("");
+      reject(error);
     });
   });
 }

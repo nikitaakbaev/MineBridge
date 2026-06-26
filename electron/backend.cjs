@@ -2,6 +2,7 @@
 
 const { spawn, spawnSync } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
 
 /**
  * Locate a Python interpreter on the user's PATH.
@@ -26,10 +27,12 @@ function findPython() {
 
     if (isWindows && cmd === "pythonw") {
       // pythonw works for the long-lived daemon, but pip install does better
-      // through console python.exe — same directory, real stderr stream.
-      const console = spawnSync("python", ["--version"], { windowsHide: true });
+      // through console python.exe from the same installation, with a real
+      // stderr stream.
+      const consoleCommand = siblingPythonExe(result.spawnfile);
+      const console = spawnSync(consoleCommand, ["--version"], { windowsHide: true });
       if (console.status === 0) {
-        pipCommand = "python";
+        pipCommand = consoleCommand;
         pipPrefixArgs = [];
       }
     }
@@ -39,6 +42,13 @@ function findPython() {
     return { command: cmd, prefixArgs, pipCommand, pipPrefixArgs, version };
   }
   return null;
+}
+
+function siblingPythonExe(spawnfile) {
+  if (!spawnfile || path.basename(spawnfile).toLowerCase() !== "pythonw.exe") {
+    return "python";
+  }
+  return path.join(path.dirname(spawnfile), "python.exe");
 }
 
 /**
@@ -104,11 +114,11 @@ function installBackend(python, backendDir, onLog) {
  * Start the FastAPI backend in a hidden subprocess. Returns the spawned
  * ChildProcess so the main process can kill it on quit.
  */
-function spawnBackend(python, cwd, onStdout, onStderr, onExit) {
+function spawnBackend(python, cwd, onStdout, onStderr, onExit, env = {}) {
   const args = [...python.prefixArgs, "-m", "minebridge_frp.app.api.main"];
   const child = spawn(python.command, args, {
     cwd,
-    env: { ...process.env, PYTHONUNBUFFERED: "1" },
+    env: { ...process.env, ...env, PYTHONUNBUFFERED: "1" },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true
   });
@@ -118,9 +128,31 @@ function spawnBackend(python, cwd, onStdout, onStderr, onExit) {
   return child;
 }
 
+function spawnBundledBackend(executablePath, env, onStdout, onStderr, onExit) {
+  const child = spawn(executablePath, [], {
+    cwd: path.dirname(executablePath),
+    env: { ...process.env, ...env, PYTHONUNBUFFERED: "1" },
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true
+  });
+  child.stdout.on("data", (chunk) => onStdout?.(chunk.toString().trim()));
+  child.stderr.on("data", (chunk) => onStderr?.(chunk.toString().trim()));
+  child.on("exit", (code) => onExit?.(code));
+  return child;
+}
+
+function bundledBackendExecutable(resourcesPath) {
+  const name = process.platform === "win32" ? "minebridge-frp-api.exe" : "minebridge-frp-api";
+  const executable = path.join(resourcesPath, "backend-bin", name);
+  return fs.existsSync(executable) ? executable : null;
+}
+
 module.exports = {
   findPython,
+  siblingPythonExe,
   isBackendInstalled,
   installBackend,
-  spawnBackend
+  spawnBackend,
+  spawnBundledBackend,
+  bundledBackendExecutable
 };

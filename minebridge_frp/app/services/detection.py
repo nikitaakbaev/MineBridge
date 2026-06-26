@@ -94,16 +94,6 @@ def _script_kind(suffix: str) -> str:
     return "script"
 
 
-def _script_runs_on_current_os(suffix: str) -> bool:
-    if suffix in (".sh", ".bash"):
-        return os.name != "nt" or shutil.which("bash") is not None
-    if suffix in (".bat", ".cmd"):
-        return os.name == "nt"
-    if suffix == ".ps1":
-        return shutil.which("pwsh") is not None or shutil.which("powershell") is not None
-    return True
-
-
 def detect_server_launchers(server_dir: Path) -> list[LauncherCandidate]:
     """Find launch scripts and jars under a server directory.
 
@@ -125,10 +115,6 @@ def detect_server_launchers(server_dir: Path) -> list[LauncherCandidate]:
             if base.startswith("user_jvm") or base.startswith("install"):
                 continue
             score = 200 if base in _LAUNCHER_SCRIPT_BASES else 150
-            if not _script_runs_on_current_os(suffix):
-                # The script can't be launched on this OS — keep it as a
-                # last-resort candidate but never let it beat anything else.
-                score = 5
             candidates.append(
                 LauncherCandidate(path=str(entry), kind=_script_kind(suffix), score=score)
             )

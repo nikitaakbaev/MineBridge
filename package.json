@@ -1,6 +1,6 @@
 {
   "name": "minebridge-frp-electron",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Electron + React frontend for MineBridge FRP.",
   "author": {
@@ -13,10 +13,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "backend": "minebridge-frp-api",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "build:backend": "python -m PyInstaller --clean --onefile --name minebridge-frp-api minebridge_frp/app/api/main.py --distpath dist-backend --workpath build/pyinstaller --specpath build/pyinstaller",
+    "dist": "npm run build && npm run build:backend && electron-builder",
+    "dist:win": "npm run build && npm run build:backend && electron-builder --win",
+    "dist:linux": "npm run build && npm run build:backend && electron-builder --linux",
+    "dist:dir": "npm run build && npm run build:backend && electron-builder --dir"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.7",
@@ -84,6 +85,17 @@
       {
         "from": "pyproject.toml",
         "to": "backend/pyproject.toml"
+      },
+      {
+        "from": "README.md",
+        "to": "backend/README.md"
+      },
+      {
+        "from": "dist-backend",
+        "to": "backend-bin",
+        "filter": [
+          "minebridge-frp-api*"
+        ]
       }
     ],
     "win": {

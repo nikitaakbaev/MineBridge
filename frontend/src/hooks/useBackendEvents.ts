@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { api, WS_URL } from "../lib/api";
+import { api, wsUrl } from "../lib/api";
 import type { BackendEvent } from "../lib/types";
 import { useAppStore } from "../store/app-store";
 
@@ -26,7 +26,7 @@ export function useBackendEvents() {
     };
 
     const connect = () => {
-      socket = new WebSocket(WS_URL);
+      socket = new WebSocket(wsUrl());
       socket.onopen = () => {
         setBackendConnected(true);
         hydrate();

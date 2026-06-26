@@ -52,6 +52,9 @@ jobs:
       - name: Build renderer
         run: npm run build
 
+      - name: Build bundled backend
+        run: npm run build:backend
+
       - name: Build installer (no publish)
         run: npx electron-builder --${{ matrix.target }} --publish never
 

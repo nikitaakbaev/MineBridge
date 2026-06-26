@@ -59,3 +59,20 @@ def test_api_health_includes_cors_header(tmp_path):
 
     response = client.get("/api/health", headers={"Origin": "http://127.0.0.1:5173"})
     assert response.headers.get("access-control-allow-origin") == "*"
+
+
+def test_api_token_rejects_unauthorized_requests(tmp_path, monkeypatch):
+    monkeypatch.setenv("MINEBRIDGE_API_TOKEN", "test-token")
+    data_dir = tmp_path / "data"
+    context = AppContext(
+        config_dir=tmp_path / "config",
+        data_dir=data_dir,
+        log_dir=tmp_path / "logs",
+        database_path=data_dir / "minebridge-frp.sqlite3",
+    )
+    client = TestClient(create_app(context))
+
+    assert client.get("/api/health").status_code == 403
+    assert client.get("/api/health", headers={"X-MineBridge-Token": "test-token"}).json() == {
+        "message": "ok"
+    }

@@ -3,18 +3,23 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 
 const {
   findPython,
   isBackendInstalled,
   installBackend,
-  spawnBackend
+  spawnBackend,
+  spawnBundledBackend,
+  bundledBackendExecutable
 } = require("./backend.cjs");
 
 const isDev = !app.isPackaged;
 let backendProcess = null;
 let mainWindow = null;
 let splashWindow = null;
+const apiToken = crypto.randomBytes(32).toString("hex");
+process.env.MINEBRIDGE_API_TOKEN = apiToken;
 
 function bundledBackendDir() {
   // In packaged builds extraResources puts pyproject.toml + minebridge_frp under
@@ -71,6 +76,10 @@ function closeSplash() {
 }
 
 async function ensureBackendReady() {
+  if (!isDev && bundledBackendExecutable(process.resourcesPath)) {
+    return { bundled: true };
+  }
+
   const python = findPython();
   if (!python) {
     dialog.showErrorBox(
@@ -132,16 +141,17 @@ async function ensureBackendReady() {
 }
 
 function startBackend(python) {
-  backendProcess = spawnBackend(
-    python,
-    backendCwd(),
-    (line) => console.log(`[backend] ${line}`),
-    (line) => console.error(`[backend] ${line}`),
-    (code) => {
-      console.log(`[backend] exited with code ${code}`);
-      backendProcess = null;
-    }
-  );
+  const onStdout = (line) => console.log(`[backend] ${line}`);
+  const onStderr = (line) => console.error(`[backend] ${line}`);
+  const onExit = (code) => {
+    console.log(`[backend] exited with code ${code}`);
+    backendProcess = null;
+  };
+  const env = { MINEBRIDGE_API_TOKEN: apiToken };
+  const bundledExecutable = !isDev ? bundledBackendExecutable(process.resourcesPath) : null;
+  backendProcess = bundledExecutable
+    ? spawnBundledBackend(bundledExecutable, env, onStdout, onStderr, onExit)
+    : spawnBackend(python, backendCwd(), onStdout, onStderr, onExit, env);
   backendProcess.on("error", (err) => {
     console.error(`[backend] failed to spawn: ${err.message}`);
     backendProcess = null;

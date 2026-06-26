@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "minebridge-frp"
-version = "0.1.0"
+version = "0.1.2"
 description = "GUI automation for FRP tunnels and local Minecraft servers."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,6 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "pyinstaller>=6.10",
   "pytest>=8.2",
   "ruff>=0.5",
 ]

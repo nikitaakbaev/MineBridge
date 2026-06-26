@@ -16,12 +16,24 @@ import type {
 } from "./types";
 
 export const API_BASE = "http://127.0.0.1:47831";
-export const WS_URL = "ws://127.0.0.1:47831/ws/events";
+
+function apiToken(): string {
+  return window.minebridge?.apiToken || "";
+}
+
+export function wsUrl(): string {
+  const token = apiToken();
+  return token
+    ? `ws://127.0.0.1:47831/ws/events?token=${encodeURIComponent(token)}`
+    : "ws://127.0.0.1:47831/ws/events";
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = apiToken();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { "X-MineBridge-Token": token } : {}),
       ...options.headers
     },
     ...options

@@ -5,6 +5,7 @@ type DialogFilter = { name: string; extensions: string[] };
 interface MinebridgeBridge {
   platform: string;
   versions: Record<string, string>;
+  apiToken?: string;
   pickDirectory?: (options?: {
     title?: string;
     defaultPath?: string;

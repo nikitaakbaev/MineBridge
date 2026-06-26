@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from minebridge_frp import __version__
 from minebridge_frp.app.api.runtime import BackendRuntime
 from minebridge_frp.app.api.schemas import (
     ApiMessage,
@@ -44,8 +46,9 @@ from minebridge_frp.app.services.detection import (
 def create_app(context: AppContext | None = None) -> FastAPI:
     """Create the local backend API used by the Electron frontend."""
     runtime = BackendRuntime(context or AppContext.create())
-    app = FastAPI(title="MineBridge FRP Backend", version="0.1.0")
+    app = FastAPI(title="MineBridge FRP Backend", version=__version__)
     app.state.runtime = runtime
+    api_token = os.environ.get("MINEBRIDGE_API_TOKEN", "")
 
     # The Electron renderer runs from a different origin than the local
     # backend (``http://127.0.0.1:5173`` in dev and ``file://`` in the packaged
@@ -64,6 +67,12 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     @app.exception_handler(MineBridgeError)
     async def minebridge_error_handler(_request, exc: MineBridgeError):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.middleware("http")
+    async def require_local_api_token(request: Request, call_next):
+        if api_token and request.headers.get("x-minebridge-token") != api_token:
+            return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+        return await call_next(request)
 
     @app.on_event("startup")
     def _on_startup() -> None:
@@ -408,6 +417,9 @@ def create_app(context: AppContext | None = None) -> FastAPI:
 
     @app.websocket("/ws/events")
     async def websocket_events(websocket: WebSocket) -> None:
+        if api_token and websocket.query_params.get("token") != api_token:
+            await websocket.close(code=1008)
+            return
         await websocket.accept()
         queue = await runtime.events.subscribe()
         try:

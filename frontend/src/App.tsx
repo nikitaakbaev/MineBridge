@@ -6,6 +6,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { ConsoleDrawer } from "./components/ui/ConsoleDrawer";
 import { useBackendEvents } from "./hooks/useBackendEvents";
 import { api } from "./lib/api";
+import { applyAccentColor } from "./lib/theme";
 import { useAppStore } from "./store/app-store";
 import { HomeScreen } from "./screens/HomeScreen";
 import { SetupScreen } from "./screens/SetupScreen";
@@ -26,6 +27,7 @@ export function App() {
   const setSetupStatus = useAppStore((state) => state.setSetupStatus);
   const setActiveScreen = useAppStore((state) => state.setActiveScreen);
   const toggleConsole = useAppStore((state) => state.toggleConsole);
+  const accentColor = useAppStore((state) => state.accentColor);
 
   const setupQuery = useQuery({
     queryKey: ["setup-status"],
@@ -44,6 +46,10 @@ export function App() {
     if (!setupQuery.data) return;
     if (!setupQuery.data.completed) setActiveScreen("setup");
   }, [setupQuery.data, setupStatus, setActiveScreen]);
+
+  useEffect(() => {
+    applyAccentColor(accentColor);
+  }, [accentColor]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {

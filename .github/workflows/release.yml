@@ -55,6 +55,9 @@ jobs:
       - name: Build bundled backend
         run: npm run build:backend
 
+      - name: Prepare bundled FRP binaries
+        run: npm run prepare:frpc
+
       - name: Build installer (no publish)
         run: npx electron-builder --${{ matrix.target }} --publish never
 

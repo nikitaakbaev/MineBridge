@@ -10,6 +10,8 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from minebridge_frp.app.utils.process import hidden_subprocess_kwargs
+
 _LAUNCHER_NAMES_EXACT = {
     "server.jar",
     "minecraft_server.jar",
@@ -141,6 +143,7 @@ def _java_version(path: Path) -> str | None:
             capture_output=True,
             text=True,
             timeout=5,
+            **hidden_subprocess_kwargs(),
         )
     except (OSError, subprocess.TimeoutExpired):
         return None

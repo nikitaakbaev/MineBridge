@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+
 import psutil
+
+
+def hidden_subprocess_kwargs() -> dict[str, int]:
+    """Return subprocess kwargs that suppress transient console windows on Windows."""
+    if os.name != "nt":
+        return {}
+    return {"creationflags": subprocess.CREATE_NO_WINDOW}  # type: ignore[attr-defined]
 
 
 def is_process_running(name_part: str) -> bool:

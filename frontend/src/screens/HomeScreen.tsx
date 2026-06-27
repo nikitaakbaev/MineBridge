@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  ArrowRight,
   Copy,
   Cpu,
   Gauge as GaugeIcon,
@@ -233,6 +234,32 @@ export function HomeScreen() {
         </div>
       )}
 
+      <div className="home-flow" aria-label="Tunnel route">
+        <div className="home-flow-node">
+          <span className={`home-flow-dot status-${minecraftStatus}`} />
+          <div>
+            <strong>Minecraft</strong>
+            <span>{serverRunning ? "local server online" : minecraftStatus}</span>
+          </div>
+        </div>
+        <ArrowRight size={16} className="home-flow-arrow" />
+        <div className="home-flow-node">
+          <span className={`home-flow-dot status-${frpcStatus}`} />
+          <div>
+            <strong>FRP tunnel</strong>
+            <span>{tunnelRunning ? "frpc connected" : frpcStatus}</span>
+          </div>
+        </div>
+        <ArrowRight size={16} className="home-flow-arrow" />
+        <div className="home-flow-node">
+          <span className={connectAddress ? "home-flow-dot status-running" : "home-flow-dot"} />
+          <div>
+            <strong>Public endpoint</strong>
+            <span>{connectAddress ?? "waiting for VPS profile"}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="home-quick-row">
         <Card className="home-quick-card">
           <div className="quick-head">
@@ -240,7 +267,7 @@ export function HomeScreen() {
             <span>CPU сервера</span>
           </div>
           <strong>{latest?.server_cpu ?? 0}%</strong>
-          <Sparkline values={cpuSeries} color="#60a5fa" domainMin={0} domainMax={100} />
+          <Sparkline values={cpuSeries} domainMin={0} domainMax={100} />
           <p className="muted">система {latest?.cpu ?? 0}%</p>
         </Card>
         <Card className="home-quick-card">
@@ -249,7 +276,7 @@ export function HomeScreen() {
             <span>RAM сервера</span>
           </div>
           <strong>{latest ? formatMb(latest.server_ram_mb) : "0 МБ"}</strong>
-          <Sparkline values={ramSeries} color="#34d399" domainMin={0} domainMax={100} />
+          <Sparkline values={ramSeries} domainMin={0} domainMax={100} />
           <p className="muted">
             {ramTotalMb > 0
               ? `${formatMb(ramUsedMb)} / ${formatMb(ramTotalMb)}`
@@ -262,7 +289,7 @@ export function HomeScreen() {
             <span>Сеть</span>
           </div>
           <strong>{latest?.net_down_kbps ?? 0} КБ/с</strong>
-          <Sparkline values={netDownSeries} color="#a78bfa" />
+          <Sparkline values={netDownSeries} />
           <p className="muted">↑ {latest?.net_up_kbps ?? 0} КБ/с</p>
         </Card>
         <Card className="home-quick-card">
@@ -271,7 +298,7 @@ export function HomeScreen() {
             <span>Игроки</span>
           </div>
           <strong>{playerCount}</strong>
-          <Sparkline values={playerSeries} color="#f59e0b" domainMin={0} />
+          <Sparkline values={playerSeries} domainMin={0} />
           <p className="muted">{players.length ? players.join(", ") : "никого"}</p>
         </Card>
       </div>

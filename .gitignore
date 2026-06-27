@@ -12,6 +12,7 @@ node_modules/
 dist-electron/
 dist-installer/
 dist-backend/
+resources/frp-bundled/
 .vite/
 .env
 .env.*

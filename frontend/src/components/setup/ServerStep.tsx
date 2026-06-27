@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { api } from "../../lib/api";
+import { isNetworkFetchError } from "../../lib/errors";
 import { useDebouncedSave } from "../../lib/useDebouncedSave";
 import type {
   DiagnosticResult,
@@ -16,6 +17,7 @@ import type {
   MinecraftConfig
 } from "../../lib/types";
 import { pickDirectory, pickFile } from "../../lib/dialog";
+import { useAppStore } from "../../store/app-store";
 import { Button } from "../ui/Button";
 import { Field, SelectInput, TextInput } from "../ui/Field";
 import { JavaPicker } from "../ui/JavaPicker";
@@ -37,9 +39,11 @@ type ServerStepProps = {
 
 export function ServerStep({ onAdvance }: ServerStepProps) {
   const queryClient = useQueryClient();
+  const backendConnected = useAppStore((state) => state.backendConnected);
   const active = useQuery({
     queryKey: ["minecraft-profile-active"],
-    queryFn: api.activeMinecraftProfile
+    queryFn: api.activeMinecraftProfile,
+    enabled: backendConnected
   });
 
   const [config, setConfig] = useState<MinecraftConfig | null>(null);
@@ -153,9 +157,9 @@ export function ServerStep({ onAdvance }: ServerStepProps) {
   });
 
   useEffect(() => {
-    runDiagnostics.mutate();
+    if (backendConnected) runDiagnostics.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [backendConnected]);
 
   const acceptEula = async () => {
     try {
@@ -179,8 +183,42 @@ export function ServerStep({ onAdvance }: ServerStepProps) {
     [diagnostics]
   );
 
-  if (active.isError)
-    return <div className="screen">Не удалось загрузить профиль: {(active.error as Error).message}</div>;
+  if (!backendConnected) {
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>Minecraft-сервер</h2>
+          <p className="muted">Ждём соединение с backend.</p>
+        </header>
+        <div className="empty-state">Backend starting...</div>
+      </div>
+    );
+  }
+
+  if (active.isError) {
+    if (isNetworkFetchError(active.error)) {
+      return (
+        <div className="setup-step-body">
+          <header className="setup-step-head">
+            <h2>Minecraft-сервер</h2>
+            <p className="muted">Ждём соединение с backend.</p>
+          </header>
+          <div className="empty-state">Backend starting...</div>
+        </div>
+      );
+    }
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>Minecraft-сервер</h2>
+          <p className="muted">Не удалось загрузить профиль сервера.</p>
+        </header>
+        <div className="error-box">{(active.error as Error).message}</div>
+        <Button onClick={() => active.refetch()}>Повторить</Button>
+      </div>
+    );
+  }
+
   if (!config) return <div className="screen">Загрузка профиля...</div>;
 
   return (
@@ -215,10 +253,7 @@ export function ServerStep({ onAdvance }: ServerStepProps) {
             <Button icon={<FolderOpen size={16} />} onClick={handlePickJar}>
               Выбрать
             </Button>
-            <Button
-              icon={<ScanSearch size={16} />}
-              onClick={() => autoDetectLauncher(config.server_dir)}
-            >
+            <Button icon={<ScanSearch size={16} />} onClick={() => autoDetectLauncher(config.server_dir)}>
               Найти
             </Button>
           </div>
@@ -319,9 +354,7 @@ export function ServerStep({ onAdvance }: ServerStepProps) {
         </div>
       )}
 
-      {actionLines.length > 0 && (
-        <pre className="setup-log">{actionLines.join("\n")}</pre>
-      )}
+      {actionLines.length > 0 && <pre className="setup-log">{actionLines.join("\n")}</pre>}
 
       <div className="setup-action-row">
         <Button

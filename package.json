@@ -11,13 +11,14 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1 --port 5173\" \"wait-on tcp:5173 && electron .\"",
     "build": "tsc --noEmit && vite build",
+    "prepare:frpc": "python scripts/prepare_frpc_bundle.py --version v0.69.1",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "backend": "minebridge-frp-api",
     "build:backend": "python -m PyInstaller --clean --onefile --name minebridge-frp-api minebridge_frp/app/api/main.py --distpath dist-backend --workpath build/pyinstaller --specpath build/pyinstaller",
-    "dist": "npm run build && npm run build:backend && electron-builder",
-    "dist:win": "npm run build && npm run build:backend && electron-builder --win",
-    "dist:linux": "npm run build && npm run build:backend && electron-builder --linux",
-    "dist:dir": "npm run build && npm run build:backend && electron-builder --dir"
+    "dist": "npm run build && npm run build:backend && npm run prepare:frpc && electron-builder",
+    "dist:win": "npm run build && npm run build:backend && npm run prepare:frpc && electron-builder --win",
+    "dist:linux": "npm run build && npm run build:backend && npm run prepare:frpc && electron-builder --linux",
+    "dist:dir": "npm run build && npm run build:backend && npm run prepare:frpc && electron-builder --dir"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.7",
@@ -95,6 +96,13 @@
         "to": "backend-bin",
         "filter": [
           "minebridge-frp-api*"
+        ]
+      },
+      {
+        "from": "resources/frp-bundled",
+        "to": "frp-bundled",
+        "filter": [
+          "**/*"
         ]
       }
     ],

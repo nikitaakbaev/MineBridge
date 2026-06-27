@@ -11,6 +11,7 @@ from minebridge_frp.app.models.tunnel import TunnelConfig
 from minebridge_frp.app.services.download_service import DownloadService
 from minebridge_frp.app.services.events import CallbackSignal
 from minebridge_frp.app.services.process_runner import ProcessRunner
+from minebridge_frp.app.utils.bundled_assets import bundled_frp_root
 from minebridge_frp.app.utils.os_detect import detect_platform
 from minebridge_frp.app.utils.ports import is_port_open
 from minebridge_frp.app.utils.secrets import generate_token
@@ -96,6 +97,9 @@ class FrpManager:
         return path
 
     def download_frpc(self, version: str | None = None) -> Path:
+        bundled = self._bundled_frpc_binary()
+        if bundled is not None:
+            return bundled
         extract_dir = self.download_service.download_frp(version=version)
         binary = self.find_frpc_binary(extract_dir)
         if binary is None:
@@ -106,7 +110,18 @@ class FrpManager:
         platform_info = detect_platform()
         base = search_dir or self.storage_dir
         candidates = sorted(base.rglob(platform_info.frpc_binary_name))
-        return candidates[-1] if candidates else None
+        if candidates:
+            return candidates[-1]
+        return self._bundled_frpc_binary()
+
+    def _bundled_frpc_binary(self) -> Path | None:
+        platform_info = detect_platform()
+        candidate = (
+            bundled_frp_root() / platform_info.frp_asset_suffix / platform_info.frpc_binary_name
+        )
+        if candidate.exists():
+            return candidate
+        return None
 
     def start_frpc(self, config_path: Path, binary_path: Path | None = None) -> None:
         if self.process.is_running:

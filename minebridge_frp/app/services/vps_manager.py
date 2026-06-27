@@ -19,6 +19,7 @@ from minebridge_frp.app.services.firewall_service import (
 from minebridge_frp.app.services.frp_manager import create_frps_toml
 from minebridge_frp.app.services.systemd_service import SERVICE_NAME, create_frps_systemd_unit
 from minebridge_frp.app.utils.archive import make_executable
+from minebridge_frp.app.utils.bundled_assets import bundled_frp_root
 from minebridge_frp.app.utils.os_detect import PlatformInfo
 from minebridge_frp.app.utils.secrets import generate_token
 
@@ -307,6 +308,11 @@ install -m 0755 "$frps_path" "$remote_dir/frps"
         if existing:
             make_executable(existing[-1])
             return existing[-1]
+
+        bundled = bundled_frp_root() / platform_info.frp_asset_suffix / "frps"
+        if bundled.exists():
+            make_executable(bundled)
+            return bundled
 
         extracted = DownloadService(storage).download_frp(platform_info=platform_info)
         matches = sorted(extracted.rglob("frps"))

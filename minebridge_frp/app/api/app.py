@@ -70,6 +70,8 @@ def create_app(context: AppContext | None = None) -> FastAPI:
 
     @app.middleware("http")
     async def require_local_api_token(request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
         if api_token and request.headers.get("x-minebridge-token") != api_token:
             return JSONResponse(status_code=403, content={"detail": "Forbidden"})
         return await call_next(request)

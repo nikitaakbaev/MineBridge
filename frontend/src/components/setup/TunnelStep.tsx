@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, KeyRound, Waypoints } from "lucide-react";
 
 import { api } from "../../lib/api";
+import { isNetworkFetchError } from "../../lib/errors";
 import { useDebouncedSave } from "../../lib/useDebouncedSave";
 import type { TunnelConfig } from "../../lib/types";
+import { useAppStore } from "../../store/app-store";
 import { Button } from "../ui/Button";
 import { Field, TextInput } from "../ui/Field";
 import { TerminalConsole } from "../ui/TerminalConsole";
@@ -15,13 +17,16 @@ type TunnelStepProps = {
 
 export function TunnelStep({ onAdvance }: TunnelStepProps) {
   const queryClient = useQueryClient();
+  const backendConnected = useAppStore((state) => state.backendConnected);
   const active = useQuery({
     queryKey: ["tunnel-profile-active"],
-    queryFn: api.activeTunnelProfile
+    queryFn: api.activeTunnelProfile,
+    enabled: backendConnected
   });
   const vps = useQuery({
     queryKey: ["vps-profile-active"],
-    queryFn: api.activeVpsProfile
+    queryFn: api.activeVpsProfile,
+    enabled: backendConnected
   });
 
   const [config, setConfig] = useState<TunnelConfig | null>(null);
@@ -94,8 +99,42 @@ export function TunnelStep({ onAdvance }: TunnelStepProps) {
     }
   });
 
-  if (active.isError)
-    return <div className="screen">Не удалось загрузить туннель: {(active.error as Error).message}</div>;
+  if (!backendConnected) {
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>FRP-туннель</h2>
+          <p className="muted">Ждём соединение с backend.</p>
+        </header>
+        <div className="empty-state">Backend starting...</div>
+      </div>
+    );
+  }
+
+  if (active.isError) {
+    if (isNetworkFetchError(active.error)) {
+      return (
+        <div className="setup-step-body">
+          <header className="setup-step-head">
+            <h2>FRP-туннель</h2>
+            <p className="muted">Ждём соединение с backend.</p>
+          </header>
+          <div className="empty-state">Backend starting...</div>
+        </div>
+      );
+    }
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>FRP-туннель</h2>
+          <p className="muted">Не удалось загрузить tunnel-профиль.</p>
+        </header>
+        <div className="error-box">{(active.error as Error).message}</div>
+        <Button onClick={() => active.refetch()}>Повторить</Button>
+      </div>
+    );
+  }
+
   if (!config) return <div className="screen">Загрузка туннеля...</div>;
 
   const update = (patch: Partial<TunnelConfig>) =>

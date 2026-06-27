@@ -24,11 +24,11 @@ export function Sidebar() {
         </div>
         <div>
           <strong>MineBridge</strong>
-          <span>FRP Launcher</span>
+          <span>FRP Control</span>
         </div>
       </div>
 
-      <nav className="nav-list">
+      <nav className="nav-list" aria-label="Main navigation">
         {items.map((item) => {
           const Icon = item.icon;
           const showSetupHint = item.id === "setup" && setupStatus && !setupStatus.completed;

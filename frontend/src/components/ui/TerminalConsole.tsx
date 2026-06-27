@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 
+import { readCssVariable } from "../../lib/theme";
+
 type TerminalConsoleProps = {
   lines: string[];
   title?: string;
@@ -19,9 +21,9 @@ export function TerminalConsole({ lines, title }: TerminalConsoleProps) {
       fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, monospace",
       fontSize: 13,
       theme: {
-        background: "#07101d",
-        foreground: "#d7e0ee",
-        cursor: "#93c5fd"
+        background: readCssVariable("--surface-sunken", "#07090b"),
+        foreground: readCssVariable("--text-soft", "#b8c0c8"),
+        cursor: readCssVariable("--accent", "#4f8cff")
       }
     });
     const fit = new FitAddon();

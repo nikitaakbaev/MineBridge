@@ -6,6 +6,8 @@ type SparklineProps = {
   domainMax?: number;
 };
 
+const DEFAULT_SPARKLINE_COLOR = "var(--accent)";
+
 /**
  * Lightweight inline-SVG sparkline.
  *
@@ -15,7 +17,7 @@ type SparklineProps = {
  */
 export function Sparkline({
   values,
-  color = "#60a5fa",
+  color = DEFAULT_SPARKLINE_COLOR,
   height = 36,
   domainMin,
   domainMax

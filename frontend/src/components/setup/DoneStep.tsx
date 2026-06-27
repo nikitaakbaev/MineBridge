@@ -2,13 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Play, Sparkles } from "lucide-react";
 
 import { api } from "../../lib/api";
+import { isNetworkFetchError } from "../../lib/errors";
 import type { SetupState } from "../../lib/types";
 import { useAppStore } from "../../store/app-store";
 import { Button } from "../ui/Button";
 
 export function DoneStep() {
   const queryClient = useQueryClient();
-  const profile = useQuery({ queryKey: ["active-profile"], queryFn: api.activeProfile });
+  const backendConnected = useAppStore((state) => state.backendConnected);
+  const profile = useQuery({
+    queryKey: ["active-profile"],
+    queryFn: api.activeProfile,
+    enabled: backendConnected
+  });
   const setActiveScreen = useAppStore((state) => state.setActiveScreen);
   const setSetupStatus = useAppStore((state) => state.setSetupStatus);
 
@@ -30,6 +36,36 @@ export function DoneStep() {
   const address = profile.data?.vps.host
     ? `${profile.data.vps.host}:${profile.data.tunnel.remote_port}`
     : null;
+
+  if (!backendConnected) {
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <div className="setup-done-mark">
+            <Sparkles size={28} />
+          </div>
+          <h2>Всё готово</h2>
+          <p className="muted">Ждём соединение с backend.</p>
+        </header>
+        <div className="empty-state">Backend starting...</div>
+      </div>
+    );
+  }
+
+  if (profile.isError && isNetworkFetchError(profile.error)) {
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <div className="setup-done-mark">
+            <Sparkles size={28} />
+          </div>
+          <h2>Всё готово</h2>
+          <p className="muted">Ждём соединение с backend.</p>
+        </header>
+        <div className="empty-state">Backend starting...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="setup-step-body setup-done">

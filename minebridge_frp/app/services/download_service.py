@@ -9,6 +9,7 @@ import requests
 
 from minebridge_frp.app.core.exceptions import ServiceError
 from minebridge_frp.app.utils.archive import extract_archive, make_executable
+from minebridge_frp.app.utils.bundled_assets import bundled_frp_root
 from minebridge_frp.app.utils.os_detect import PlatformInfo, detect_platform
 
 FRP_RELEASES_API = "https://api.github.com/repos/fatedier/frp/releases"
@@ -29,6 +30,10 @@ class DownloadService:
     ) -> Path:
         """Download FRP and return the directory containing extracted files."""
         platform_info = platform_info or detect_platform()
+        bundled = self._bundled_binary(platform_info)
+        if bundled is not None:
+            return bundled.parent
+
         release = self._fetch_release(version or DEFAULT_FRP_VERSION)
         asset = self._select_asset(release, platform_info)
         archive_path = self._download_asset(asset["browser_download_url"])
@@ -37,6 +42,12 @@ class DownloadService:
         extract_archive(archive_path, extract_dir)
         self._make_binaries_executable(extract_dir, platform_info)
         return extract_dir
+
+    def _bundled_binary(self, platform_info: PlatformInfo) -> Path | None:
+        candidate = bundled_frp_root() / platform_info.frp_asset_suffix / platform_info.frpc_binary_name
+        if candidate.exists():
+            return candidate
+        return None
 
     def _fetch_release(self, version: str) -> dict:
         url = f"{FRP_RELEASES_API}/tags/{version}"

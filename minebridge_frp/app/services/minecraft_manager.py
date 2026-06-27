@@ -14,6 +14,7 @@ from minebridge_frp.app.models.minecraft import MinecraftConfig
 from minebridge_frp.app.services.events import CallbackSignal
 from minebridge_frp.app.services.process_runner import ProcessRunner
 from minebridge_frp.app.utils.ports import wait_until_port_open
+from minebridge_frp.app.utils.process import hidden_subprocess_kwargs
 
 _JOIN_PATTERN = re.compile(r"(?:\]:?\s*)([A-Za-z0-9_]{1,16}) joined the game\b")
 _LEFT_PATTERN = re.compile(
@@ -141,6 +142,7 @@ class MinecraftManager:
                 capture_output=True,
                 text=True,
                 timeout=10,
+                **hidden_subprocess_kwargs(),
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise ConfigurationError(f"Не удалось запустить Java: {exc}") from exc

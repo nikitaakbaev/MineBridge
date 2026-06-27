@@ -13,7 +13,7 @@ type StatTileProps = {
   dataKey?: keyof MetricsSample;
 };
 
-export function StatTile({ icon, label, value, hint, accent = "#60a5fa", data, dataKey }: StatTileProps) {
+export function StatTile({ icon, label, value, hint, accent = "var(--accent)", data, dataKey }: StatTileProps) {
   return (
     <div className="stat-tile">
       <div className="stat-tile-head">

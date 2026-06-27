@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type { BackendEvent, MetricsSample, RuntimeState, ScreenId, SetupState } from "../lib/types";
+import { ACCENT_STORAGE_KEY, normalizeHexColor, readStoredAccentColor } from "../lib/theme";
 
 type RuntimeStatus = "idle" | "running" | "stopping" | "stopped" | "error" | string;
 
@@ -24,10 +25,12 @@ type AppState = {
   serverStartedAt: number | null;
   setupStatus: SetupState | null;
   consoleOpen: boolean;
+  accentColor: string;
   setActiveScreen: (screen: ScreenId) => void;
   setBackendConnected: (connected: boolean) => void;
   setSetupStatus: (status: SetupState) => void;
   setConsoleOpen: (open: boolean) => void;
+  setAccentColor: (color: string) => void;
   toggleConsole: () => void;
   pushLog: (target: "minecraft" | "frpc" | "vps", line: string) => void;
   hydrateState: (state: RuntimeState) => void;
@@ -54,10 +57,17 @@ export const useAppStore = create<AppState>((set) => ({
   serverStartedAt: null,
   setupStatus: null,
   consoleOpen: false,
+  accentColor: readStoredAccentColor(),
   setActiveScreen: (activeScreen) => set({ activeScreen }),
   setBackendConnected: (backendConnected) => set({ backendConnected }),
   setSetupStatus: (setupStatus) => set({ setupStatus }),
   setConsoleOpen: (consoleOpen) => set({ consoleOpen }),
+  setAccentColor: (color) => {
+    const accentColor = normalizeHexColor(color);
+    if (!accentColor) return;
+    window.localStorage.setItem(ACCENT_STORAGE_KEY, accentColor);
+    set({ accentColor });
+  },
   toggleConsole: () => set((state) => ({ consoleOpen: !state.consoleOpen })),
   pushLog: (target, line) =>
     set((state) => {

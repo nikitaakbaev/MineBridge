@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 import { api } from "../../lib/api";
+import { isNetworkFetchError } from "../../lib/errors";
 import { useDebouncedSave } from "../../lib/useDebouncedSave";
 import type { VpsConfig } from "../../lib/types";
+import { useAppStore } from "../../store/app-store";
 import { Button } from "../ui/Button";
 import { Field, SelectInput, TextInput } from "../ui/Field";
 import { TerminalConsole } from "../ui/TerminalConsole";
@@ -15,9 +17,11 @@ type VpsStepProps = {
 
 export function VpsStep({ onAdvance }: VpsStepProps) {
   const queryClient = useQueryClient();
+  const backendConnected = useAppStore((state) => state.backendConnected);
   const active = useQuery({
     queryKey: ["vps-profile-active"],
-    queryFn: api.activeVpsProfile
+    queryFn: api.activeVpsProfile,
+    enabled: backendConnected
   });
 
   const [config, setConfig] = useState<VpsConfig | null>(null);
@@ -72,7 +76,7 @@ export function VpsStep({ onAdvance }: VpsStepProps) {
         `SSH exit=${ssh.exit_status ?? "?"}: ${ssh.stdout || ssh.stderr || "ok"}`
       ]);
       if (ssh.exit_status && ssh.exit_status !== 0) {
-        throw new Error(ssh.stderr || ssh.stdout || "SSH вернул ненулевой код.");
+        throw new Error(ssh.stderr || ssh.stdout || "SSH вернул не нулевой код.");
       }
       setLogs((lines) => [...lines, "Установка frps на VPS..."]);
       const install = await api.installFrps(password);
@@ -92,8 +96,42 @@ export function VpsStep({ onAdvance }: VpsStepProps) {
     }
   });
 
-  if (active.isError)
-    return <div className="screen">Не удалось загрузить VPS-профиль: {(active.error as Error).message}</div>;
+  if (!backendConnected) {
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>VPS-сервер</h2>
+          <p className="muted">Ждём соединение с backend.</p>
+        </header>
+        <div className="empty-state">Backend starting...</div>
+      </div>
+    );
+  }
+
+  if (active.isError) {
+    if (isNetworkFetchError(active.error)) {
+      return (
+        <div className="setup-step-body">
+          <header className="setup-step-head">
+            <h2>VPS-сервер</h2>
+            <p className="muted">Ждём соединение с backend.</p>
+          </header>
+          <div className="empty-state">Backend starting...</div>
+        </div>
+      );
+    }
+    return (
+      <div className="setup-step-body">
+        <header className="setup-step-head">
+          <h2>VPS-сервер</h2>
+          <p className="muted">Не удалось загрузить VPS-профиль.</p>
+        </header>
+        <div className="error-box">{(active.error as Error).message}</div>
+        <Button onClick={() => active.refetch()}>Повторить</Button>
+      </div>
+    );
+  }
+
   if (!config) return <div className="screen">Загрузка VPS-профиля...</div>;
 
   const update = (patch: Partial<VpsConfig>) =>

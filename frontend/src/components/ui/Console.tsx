@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 
+import { readCssVariable } from "../../lib/theme";
+
 type ConsoleProps = {
   lines: string[];
   title?: string;
@@ -30,6 +32,15 @@ const KEY_BACKSPACE = "";
 const KEY_CTRL_C = "";
 const KEY_UP = `${ESC}[A`;
 const KEY_DOWN = `${ESC}[B`;
+
+function terminalTheme() {
+  return {
+    background: readCssVariable("--surface-sunken", "#07090b"),
+    foreground: readCssVariable("--text-soft", "#b8c0c8"),
+    cursor: readCssVariable("--accent", "#4f8cff"),
+    selectionBackground: `rgb(${readCssVariable("--accent-rgb", "79 140 255")} / 0.24)`
+  };
+}
 
 function commonPrefixLength(a: string[], b: string[]): number {
   const max = Math.min(a.length, b.length);
@@ -106,12 +117,7 @@ function SplitConsole({ lines, title, prompt, onSubmit, disabled, disabledHint }
       scrollback: 5000,
       fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, monospace",
       fontSize: 13,
-      theme: {
-        background: "#060d18",
-        foreground: "#d7e0ee",
-        cursor: "#7dd3fc",
-        selectionBackground: "#1e3a5f"
-      }
+      theme: terminalTheme()
     });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
@@ -272,12 +278,7 @@ function BottomPromptConsole({
       scrollback: 5000,
       fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, monospace",
       fontSize: 13,
-      theme: {
-        background: "#060d18",
-        foreground: "#d7e0ee",
-        cursor: "#7dd3fc",
-        selectionBackground: "#1e3a5f"
-      }
+      theme: terminalTheme()
     });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
